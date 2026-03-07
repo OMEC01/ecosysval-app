@@ -1,7 +1,29 @@
-// src/pages/Tendencias.jsx
+// ======================================================
+// 📁 src/pages/Tendencias.jsx
+// ------------------------------------------------------
+// 📊 MÓDULO: Tendencias de mercado
+// ------------------------------------------------------
+// ¿Qué hace esta pantalla?
+// - Detecta señales de demanda por país/sector/tipo y búsqueda
+// - Calcula KPIs (demanda, no atendida, tendencias activas, score)
+// - Muestra gráficos (línea por semana + barras ranking)
+// - Lista "demanda no atendida" con acciones
+// - Genera recomendaciones automáticas en base a topItem/sector/pais
+//
+// Notas:
+// - Actualmente usa MOCK data (demandEventsMock / unmetDemandMock).
+// - Preparado para theme tokens (light/dark) vía ThemeProvider.
+// - Usa clases globales: bg-surface, text-text, border-border, shadow-pro, etc.
+// ======================================================
+
 import React, { useMemo, useState } from "react";
 import MainHeader from "../components/MainHeader";
 import SidebarMenu from "../components/SidebarMenu";
+import { useTheme } from "../components/ThemeProvider";
+
+// ------------------------------------------------------
+// 🎨 Iconografía UI
+// ------------------------------------------------------
 import {
   TrendingUp,
   Search,
@@ -19,6 +41,9 @@ import {
   Lightbulb,
 } from "lucide-react";
 
+// ------------------------------------------------------
+// 📈 Componentes Recharts (gráficas)
+// ------------------------------------------------------
 import {
   ResponsiveContainer,
   LineChart,
@@ -33,7 +58,11 @@ import {
 
 /* ---------------- Mock data (luego lo conectas a backend) ---------------- */
 
-// Eventos de demanda (lo que están pidiendo empresas)
+/**
+ * Eventos de demanda (lo que están pidiendo empresas)
+ * - cada registro representa una señal agregada por semana
+ * - tendencia: valor 0..1 para estimar crecimiento
+ */
 const demandEventsMock = [
   // MX
   { id: 1, pais: "México", sector: "Construcción", item: "Madera de pino", tipo: "Producto", semana: "S1", count: 18, unidad: "m³", tendencia: 0.92 },
@@ -62,7 +91,11 @@ const demandEventsMock = [
   { id: 18, pais: "Canadá", sector: "Automotriz", item: "Networking proveedores", tipo: "Servicio", semana: "S2", count: 7, unidad: "Paquetes", tendencia: 0.61 },
 ];
 
-// “No atendidas” = solicitudes que te llegaron (o detectaste) y no pudiste cerrar por falta de stock / capacidad
+/**
+ * “No atendidas” = oportunidades perdidas:
+ * - llegaron solicitudes o señales, pero no se cerraron
+ * - motivo típico: sin inventario / capacidad / partner aduanal / etc.
+ */
 const unmetDemandMock = [
   {
     id: "ud-001",
@@ -102,10 +135,15 @@ const unmetDemandMock = [
   },
 ];
 
-// Recomendaciones (acciones sugeridas)
+/**
+ * Recomendaciones (acciones sugeridas)
+ * - Se construyen dinámicamente en base a topItem + sector + país
+ * - Retorna tarjetas con: titulo, desc, action, icon
+ */
 function buildRecommendations({ topItem, sector, pais }) {
   const recs = [];
 
+  // Si existe un topItem, recomendamos abastecimiento y publicación
   if (topItem) {
     recs.push({
       id: "r1",
@@ -123,6 +161,7 @@ function buildRecommendations({ topItem, sector, pais }) {
     });
   }
 
+  // Siempre sugerimos alianzas
   recs.push({
     id: "r3",
     titulo: `Buscar alianzas por sector: ${sector || "tu sector"}`,
@@ -131,6 +170,7 @@ function buildRecommendations({ topItem, sector, pais }) {
     icon: BadgeCheck,
   });
 
+  // Siempre sugerimos alertas inteligentes
   recs.push({
     id: "r4",
     titulo: `Configurar alertas inteligentes`,
@@ -142,437 +182,546 @@ function buildRecommendations({ topItem, sector, pais }) {
   return recs;
 }
 
-/* ---------------- UI helpers ---------------- */
-const glassCard =
-  "rounded-3xl border border-white/10 bg-black/55 backdrop-blur-xl shadow-2xl";
+/* ---------------- UI helpers (theme tokens) ---------------- */
 
-const chipBase =
-  "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-extrabold";
+/**
+ * glassCard: contenedor base tipo "glassmorphism"
+ * chipBase : pill/chip para metadatos
+ */
+const glassCard = "rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro";
+const chipBase = "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-extrabold";
 
-function scoreChip(score) {
-  if (score >= 85) return "border-emerald-300/20 bg-emerald-500/15 text-emerald-200";
-  if (score >= 70) return "border-amber-300/20 bg-amber-500/15 text-amber-200";
-  return "border-red-300/20 bg-red-500/15 text-red-200";
+/**
+ * scoreChip:
+ * - Pinta el chip de "Opportunity XX%" según score
+ * - Respeta light/dark con theme
+ */
+function scoreChip(score, theme) {
+  const isLight = theme === "light";
+  if (score >= 85) return isLight ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-800" : "border-emerald-300/25 bg-emerald-500/15 text-emerald-200";
+  if (score >= 70) return isLight ? "border-amber-400/30 bg-amber-500/10 text-amber-800" : "border-amber-300/25 bg-amber-500/15 text-amber-200";
+  return isLight ? "border-red-400/30 bg-red-500/10 text-red-800" : "border-red-300/25 bg-red-500/15 text-red-200";
 }
 
 export default function Tendencias() {
+  // ------------------------------------------------------
+  // 🎛️ Theme actual (light/dark)
+  // ------------------------------------------------------
+  const { theme } = useTheme();
+
+  // ------------------------------------------------------
+  // 🎚️ Estados UI (filtros)
+  // ------------------------------------------------------
   const [pais, setPais] = useState("México");
   const [sector, setSector] = useState("Todos");
   const [tipo, setTipo] = useState("Todos"); // Producto | Servicio | Todos
   const [q, setQ] = useState("");
   const [periodo, setPeriodo] = useState("Últimas 2 semanas");
 
+  // Listas para selects
   const paises = ["México", "Estados Unidos", "Canadá"];
   const sectores = useMemo(() => {
     const list = Array.from(new Set(demandEventsMock.map((d) => d.sector)));
     return ["Todos", ...list];
   }, []);
 
+  // ------------------------------------------------------
+  // 🔎 Filtrado principal (demanda detectada)
+  // ------------------------------------------------------
   const filtrados = useMemo(() => {
     const term = q.trim().toLowerCase();
     return demandEventsMock.filter((d) => {
       const okPais = d.pais === pais;
       const okSector = sector === "Todos" ? true : d.sector === sector;
       const okTipo = tipo === "Todos" ? true : d.tipo === tipo;
-      const okSearch =
-        !term ||
-        d.item.toLowerCase().includes(term) ||
-        d.sector.toLowerCase().includes(term);
-
+      const okSearch = !term || d.item.toLowerCase().includes(term) || d.sector.toLowerCase().includes(term);
       return okPais && okSector && okTipo && okSearch;
     });
   }, [pais, sector, tipo, q]);
 
-  // Top items agrupados
+  // ------------------------------------------------------
+  // 🥇 Top items agrupados (por item/tipo/sector)
+  // - total: suma de count
+  // - trend: máx tendencia encontrada
+  // ------------------------------------------------------
   const topItems = useMemo(() => {
     const map = new Map();
     for (const d of filtrados) {
       const key = `${d.item}__${d.tipo}__${d.sector}`;
-      const prev = map.get(key) || { item: d.item, tipo: d.tipo, sector: d.sector, total: 0, unidad: d.unidad, trend: 0 };
+      const prev = map.get(key) || {
+        item: d.item,
+        tipo: d.tipo,
+        sector: d.sector,
+        total: 0,
+        unidad: d.unidad,
+        trend: 0,
+      };
       prev.total += d.count;
       prev.trend = Math.max(prev.trend, d.tendencia);
       map.set(key, prev);
     }
-    return Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, 8);
+    return Array.from(map.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 8);
   }, [filtrados]);
 
+  // Top #1 (para highlight y recomendaciones)
   const topItem = topItems[0] || null;
 
-  // Serie para línea (demanda por semana)
+  // ------------------------------------------------------
+  // 📈 Serie para gráfica de línea (demanda por semana)
+  // - Weeks fijas para mantener consistencia en UI
+  // - Si no hay data, muestra 0
+  // ------------------------------------------------------
   const lineSeries = useMemo(() => {
     const weeks = ["S1", "S2", "S3", "S4"];
     const totals = new Map(weeks.map((w) => [w, 0]));
     for (const d of filtrados) totals.set(d.semana, (totals.get(d.semana) || 0) + d.count);
-    return weeks
-      .filter((w) => totals.get(w) !== undefined)
-      .map((w) => ({ semana: w, demanda: totals.get(w) || 0 }));
+    return weeks.map((w) => ({ semana: w, demanda: totals.get(w) || 0 }));
   }, [filtrados]);
 
-  // Barras: top items
+  // ------------------------------------------------------
+  // 📊 Serie para barras (ranking top items)
+  // ------------------------------------------------------
   const barSeries = useMemo(() => topItems.map((t) => ({ name: t.item, total: t.total })), [topItems]);
 
-  // Unmet demand del país/sector
+  // ------------------------------------------------------
+  // 🚨 Demanda no atendida (filtrada por país/sector y search)
+  // ------------------------------------------------------
   const unmet = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return unmetDemandMock.filter((u) => {
-      const okPais = u.pais === pais;
-      const okSector = sector === "Todos" ? true : u.sector === sector;
-      const okSearch = !term || u.item.toLowerCase().includes(term) || u.motivo.toLowerCase().includes(term);
-      return okPais && okSector && okSearch;
-    }).sort((a, b) => b.score - a.score);
+    return unmetDemandMock
+      .filter((u) => {
+        const okPais = u.pais === pais;
+        const okSector = sector === "Todos" ? true : u.sector === sector;
+        const okSearch = !term || u.item.toLowerCase().includes(term) || u.motivo.toLowerCase().includes(term);
+        return okPais && okSector && okSearch;
+      })
+      .sort((a, b) => b.score - a.score);
   }, [pais, sector, q]);
 
+  // ------------------------------------------------------
+  // 📌 KPIs
+  // ------------------------------------------------------
   const kpiDemanda = useMemo(() => filtrados.reduce((acc, d) => acc + d.count, 0), [filtrados]);
   const kpiNoAtendida = useMemo(() => unmet.reduce((acc, u) => acc + u.empresas, 0), [unmet]);
   const kpiTendencias = topItems.length;
+
+  /**
+   * Opportunity Score:
+   * - volumeScore: normaliza total (topItem.total / 30) -> 0..100
+   * - trendScore : tendencia (0..1) -> 0..100
+   * - mezcla: 55% volumen + 45% tendencia
+   */
   const kpiOpportunityScore = useMemo(() => {
     if (!topItem) return 0;
-    // Score simple: mezcla tendencia (0-1) y volumen
     const volumeScore = Math.min(100, Math.round((topItem.total / 30) * 100));
     const trendScore = Math.round(topItem.trend * 100);
-    return Math.round((volumeScore * 0.55) + (trendScore * 0.45));
+    return Math.round(volumeScore * 0.55 + trendScore * 0.45);
   }, [topItem]);
 
+  // ------------------------------------------------------
+  // 💡 Recomendaciones dinámicas (basadas en topItem)
+  // ------------------------------------------------------
   const recommendations = useMemo(
-    () => buildRecommendations({ topItem, sector: sector === "Todos" ? (topItem?.sector || "General") : sector, pais }),
+    () =>
+      buildRecommendations({
+        topItem,
+        sector: sector === "Todos" ? (topItem?.sector || "General") : sector,
+        pais,
+      }),
     [topItem, sector, pais]
   );
 
+  // ------------------------------------------------------
+  // 🎨 Ajustes visuales de gráficos según theme
+  // (sin romper tu lógica / sin cambiar estructuras)
+  // ------------------------------------------------------
+  const gridStroke = theme === "light" ? "rgba(15,23,42,0.10)" : "rgba(255,255,255,0.10)";
+  const axisStroke = theme === "light" ? "rgba(15,23,42,0.35)" : "rgba(255,255,255,0.35)";
+  const tooltipStyle = theme === "light"
+    ? { backgroundColor: "rgba(255,255,255,0.95)", border: "1px solid rgba(15,23,42,0.12)", borderRadius: 12 }
+    : { backgroundColor: "rgba(11,22,48,0.95)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12 };
+
   return (
-    <div
-      className="min-h-screen bg-fixed bg-center bg-cover flex flex-col"
-      style={{ backgroundImage: "url('/fondo.png')" }}
-    >
-      <MainHeader showSearch={true} />
+    <div className="min-h-screen flex flex-col relative">
+      {/* ------------------------------------------------------
+          ✨ Overlay decorativo (mantiene el fondo global)
+         ------------------------------------------------------ */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div
+          className={[
+            "absolute inset-0",
+            "bg-[radial-gradient(1200px_600px_at_10%_10%,rgba(236,182,14,0.16),transparent_55%)]",
+            "bg-[radial-gradient(900px_450px_at_92%_18%,rgba(59,130,246,0.10),transparent_55%)]",
+          ].join(" ")}
+        />
+      </div>
 
-      <div className="flex flex-1">
-        <aside className="w-64 bg-blue-900 text-white shadow-lg hidden md:block">
-          <SidebarMenu />
-        </aside>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {/* Header global (con search opcional) */}
+        <MainHeader showSearch={true} />
 
-        <main className="flex-1 p-6 relative">
-          <div className="absolute inset-0 bg-black/25 -z-10" />
+        <div className="flex flex-1">
+          {/* Sidebar responsive */}
+          <aside className="hidden md:block w-64">
+            <SidebarMenu />
+          </aside>
 
-          <div className="mx-auto w-full max-w-6xl space-y-6">
-            {/* Header */}
-            <div className={`${glassCard} px-6 py-5`}>
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-yellow-300" />
-                  </div>
+          <main className="flex-1 p-6">
+            <div className="mx-auto w-full max-w-6xl space-y-6">
+              {/* ------------------------------------------------------
+                  🧾 Header de página
+                 ------------------------------------------------------ */}
+              <div className={`${glassCard} px-6 py-5`}>
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-2xl border border-border bg-surface/40 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-accent" />
+                    </div>
 
-                  <div>
-                    <h1 className="text-white font-extrabold text-xl md:text-2xl">
-                      Tendencias de mercado
-                    </h1>
-                    <p className="text-white/70 text-sm mt-1 max-w-2xl">
-                      Detecta qué están solicitando las empresas, identifica demanda no atendida y recibe sugerencias
-                      para capturar oportunidades por país, sector y tipo de operación.
-                    </p>
+                    <div>
+                      <h1 className="text-text font-extrabold text-xl md:text-2xl">
+                        Tendencias de mercado
+                      </h1>
+                      <p className="text-muted text-sm mt-1 max-w-2xl">
+                        Detecta qué están solicitando las empresas, identifica demanda no atendida y recibe sugerencias
+                        para capturar oportunidades por país, sector y tipo de operación.
+                      </p>
 
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <span className={`${chipBase} border-white/10 bg-white/5 text-white/80`}>
-                        <MapPin className="w-3.5 h-3.5" />
-                        {pais}
-                      </span>
-                      <span className={`${chipBase} border-white/10 bg-white/5 text-white/80`}>
-                        <Tag className="w-3.5 h-3.5" />
-                        {sector === "Todos" ? "Todos los sectores" : sector}
-                      </span>
-                      <span className={`${chipBase} border-white/10 bg-white/5 text-white/80`}>
-                        <Filter className="w-3.5 h-3.5" />
-                        {periodo}
-                      </span>
+                      {/* Chips resumen (pais / sector / periodo) */}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className={`${chipBase} border-border bg-surface/40 text-text/80`}>
+                          <MapPin className="w-3.5 h-3.5" />
+                          {pais}
+                        </span>
+                        <span className={`${chipBase} border-border bg-surface/40 text-text/80`}>
+                          <Tag className="w-3.5 h-3.5" />
+                          {sector === "Todos" ? "Todos los sectores" : sector}
+                        </span>
+                        <span className={`${chipBase} border-border bg-surface/40 text-text/80`}>
+                          <Filter className="w-3.5 h-3.5" />
+                          {periodo}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => alert("Mock: actualizar / sincronizar tendencias")}
-                    className="rounded-full bg-white/10 border border-white/10 px-5 py-2 text-sm font-extrabold text-white/90 hover:bg-white/15 transition"
-                  >
-                    Actualizar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => alert("Mock: configurar alertas")}
-                    className="rounded-full bg-[#ffcf43] px-5 py-2 text-sm font-extrabold text-[#071a33] shadow hover:brightness-105 transition"
-                  >
-                    Configurar alertas
-                  </button>
+                  {/* Acciones rápidas */}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => alert("Mock: actualizar / sincronizar tendencias")}
+                      className="rounded-full bg-surface/60 border border-border px-5 py-2 text-sm font-extrabold text-text hover:bg-surface transition"
+                    >
+                      Actualizar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => alert("Mock: configurar alertas")}
+                      className="rounded-full bg-accent px-5 py-2 text-sm font-extrabold text-slate-900 shadow-pro hover:brightness-105 transition"
+                    >
+                      Configurar alertas
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Filters */}
-            <div className={`${glassCard} p-5`}>
-              <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto_auto_auto] items-end">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
-                  <input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Buscar productos/servicios (ej: pino, logística, acero...)"
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/10 border border-white/10 text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-yellow-400/60"
+              {/* ------------------------------------------------------
+                  🎛️ Filtros
+                 ------------------------------------------------------ */}
+              <div className={`${glassCard} p-5`}>
+                <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto_auto_auto] items-end">
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                    <input
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder="Buscar productos/servicios (ej: pino, logística, acero...)"
+                      className="w-full pl-11 pr-4 py-3 rounded-2xl bg-surface/60 border border-border text-text placeholder:text-muted/70 outline-none focus:ring-2 focus:ring-ring/40"
+                    />
+                  </div>
+
+                  {/* Selects */}
+                  <Select theme={theme} value={pais} onChange={setPais} label="País" options={paises} />
+                  <Select theme={theme} value={sector} onChange={setSector} label="Sector" options={sectores} />
+                  <Select theme={theme} value={tipo} onChange={setTipo} label="Tipo" options={["Todos", "Producto", "Servicio"]} />
+                  <Select
+                    theme={theme}
+                    value={periodo}
+                    onChange={setPeriodo}
+                    label="Periodo"
+                    options={["Últimas 2 semanas", "Últimos 30 días", "Últimos 90 días"]}
                   />
                 </div>
-
-                <Select value={pais} onChange={setPais} label="País" options={paises} />
-                <Select value={sector} onChange={setSector} label="Sector" options={sectores} />
-                <Select value={tipo} onChange={setTipo} label="Tipo" options={["Todos", "Producto", "Servicio"]} />
-                <Select value={periodo} onChange={setPeriodo} label="Periodo" options={["Últimas 2 semanas", "Últimos 30 días", "Últimos 90 días"]} />
-              </div>
-            </div>
-
-            {/* KPIs */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Kpi
-                title="Demanda detectada"
-                value={kpiDemanda}
-                subtitle="Total de solicitudes / señales"
-                icon={BarChart3}
-              />
-              <Kpi
-                title="No atendidas"
-                value={kpiNoAtendida}
-                subtitle="Empresas afectadas"
-                icon={AlertTriangle}
-                accent="warn"
-              />
-              <Kpi
-                title="Tendencias activas"
-                value={kpiTendencias}
-                subtitle="Productos/servicios top"
-                icon={LineIcon}
-              />
-              <Kpi
-                title="Opportunity score"
-                value={`${kpiOpportunityScore}%`}
-                subtitle="Potencial estimado"
-                icon={Sparkles}
-                accent="good"
-              />
-            </div>
-
-            {/* Charts */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className={`${glassCard} p-6`}>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-white font-extrabold">Demanda por semana</div>
-                    <div className="text-white/60 text-sm">
-                      Señales agregadas (filtrado por país/sector/tipo)
-                    </div>
-                  </div>
-                  <span className={`${chipBase} border-white/10 bg-white/5 text-white/80`}>
-                    <TrendingUp className="w-3.5 h-3.5 text-yellow-300" />
-                    {topItem ? `Top: ${topItem.item}` : "Sin datos"}
-                  </span>
-                </div>
-
-                <div className="mt-5 h-[260px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={lineSeries}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="semana" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="demanda" strokeWidth={3} dot />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
               </div>
 
-              <div className={`${glassCard} p-6`}>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-white font-extrabold">Ranking de tendencias</div>
-                    <div className="text-white/60 text-sm">
-                      Top ítems por volumen total detectado
-                    </div>
-                  </div>
-                  <span className={`${chipBase} border-white/10 bg-white/5 text-white/80`}>
-                    <Package className="w-3.5 h-3.5 text-yellow-300" />
-                    {tipo}
-                  </span>
-                </div>
-
-                <div className="mt-5 h-[260px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={barSeries}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" hide />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="total" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="mt-4 grid gap-2">
-                  {topItems.slice(0, 5).map((t) => (
-                    <div
-                      key={t.item}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0">
-                        <div className="text-white font-semibold truncate">{t.item}</div>
-                        <div className="text-white/60 text-xs truncate">
-                          {t.sector} • {t.tipo} • unidad: {t.unidad}
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-yellow-300 font-extrabold">{t.total}</div>
-                        <div className="text-white/55 text-[11px]">volumen</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {/* ------------------------------------------------------
+                  📌 KPIs
+                 ------------------------------------------------------ */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Kpi
+                  theme={theme}
+                  title="Demanda detectada"
+                  value={kpiDemanda}
+                  subtitle="Total de solicitudes / señales"
+                  icon={BarChart3}
+                />
+                <Kpi
+                  theme={theme}
+                  title="No atendidas"
+                  value={kpiNoAtendida}
+                  subtitle="Empresas afectadas"
+                  icon={AlertTriangle}
+                  accent="warn"
+                />
+                <Kpi
+                  theme={theme}
+                  title="Tendencias activas"
+                  value={kpiTendencias}
+                  subtitle="Productos/servicios top"
+                  icon={LineIcon}
+                />
+                <Kpi
+                  theme={theme}
+                  title="Opportunity score"
+                  value={`${kpiOpportunityScore}%`}
+                  subtitle="Potencial estimado"
+                  icon={Sparkles}
+                  accent="good"
+                />
               </div>
-            </div>
 
-            {/* Unmet demand + Recommendations */}
-            <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-              {/* Unmet demand */}
-              <div className={`${glassCard} p-6`}>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-white font-extrabold">Demanda no atendida</div>
-                    <div className="text-white/60 text-sm">
-                      Casos donde hubo intención de compra/venta pero no se cerró (stock/capacidad/partner).
+              {/* ------------------------------------------------------
+                  📈 Gráficos
+                 ------------------------------------------------------ */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Line chart */}
+                <div className={`${glassCard} p-6`}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-text font-extrabold">Demanda por semana</div>
+                      <div className="text-muted text-sm">Señales agregadas (filtrado por país/sector/tipo)</div>
                     </div>
+                    <span className={`${chipBase} border-border bg-surface/40 text-text/80`}>
+                      <TrendingUp className="w-3.5 h-3.5 text-accent" />
+                      {topItem ? `Top: ${topItem.item}` : "Sin datos"}
+                    </span>
                   </div>
 
-                  <span className={`${chipBase} border-red-300/20 bg-red-500/15 text-red-200`}>
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    Señales críticas
-                  </span>
+                  <div className="mt-5 h-[260px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={lineSeries}>
+                        <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" />
+                        <XAxis dataKey="semana" stroke={axisStroke} tick={{ fill: axisStroke }} />
+                        <YAxis stroke={axisStroke} tick={{ fill: axisStroke }} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Line type="monotone" dataKey="demanda" strokeWidth={3} dot />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
-                {unmet.length === 0 ? (
-                  <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/70">
-                    No hay registros de demanda no atendida con estos filtros.
+                {/* Bar chart */}
+                <div className={`${glassCard} p-6`}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-text font-extrabold">Ranking de tendencias</div>
+                      <div className="text-muted text-sm">Top ítems por volumen total detectado</div>
+                    </div>
+                    <span className={`${chipBase} border-border bg-surface/40 text-text/80`}>
+                      <Package className="w-3.5 h-3.5 text-accent" />
+                      {tipo}
+                    </span>
                   </div>
-                ) : (
-                  <div className="mt-5 grid gap-3">
-                    {unmet.map((u) => (
+
+                  <div className="mt-5 h-[260px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={barSeries}>
+                        <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" />
+                        <XAxis dataKey="name" hide />
+                        <YAxis stroke={axisStroke} tick={{ fill: axisStroke }} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Bar dataKey="total" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Listado top 5 */}
+                  <div className="mt-4 grid gap-2">
+                    {topItems.slice(0, 5).map((t) => (
                       <div
-                        key={u.id}
-                        className="rounded-3xl border border-white/10 bg-white/5 p-5"
+                        key={`${t.item}-${t.sector}-${t.tipo}`}
+                        className="rounded-2xl border border-border bg-surface/40 px-4 py-3 flex items-center justify-between gap-3"
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="text-white font-extrabold truncate">{u.item}</div>
-                            <div className="text-white/60 text-sm mt-1">
-                              {u.sector} • {u.estado}, {u.pais}
-                            </div>
-
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <span className={`${chipBase} border-white/10 bg-black/25 text-white/80`}>
-                                <ArrowDownLeft className="w-3.5 h-3.5" />
-                                {u.cantidad}
-                              </span>
-                              <span className={`${chipBase} border-white/10 bg-black/25 text-white/80`}>
-                                Motivo: {u.motivo}
-                              </span>
-                              <span className={`${chipBase} ${scoreChip(u.score)}`}>
-                                Opportunity {u.score}%
-                              </span>
-                            </div>
-
-                            <div className="mt-3 text-white/60 text-xs">
-                              Detectado: <span className="text-white/80 font-semibold">{u.fecha}</span> • Empresas:{" "}
-                              <span className="text-white/80 font-semibold">{u.empresas}</span>
-                            </div>
+                        <div className="min-w-0">
+                          <div className="text-text font-semibold truncate">{t.item}</div>
+                          <div className="text-muted text-xs truncate">
+                            {t.sector} • {t.tipo} • unidad: {t.unidad}
                           </div>
+                        </div>
 
-                          <div className="flex flex-col gap-2">
-                            <button
-                              type="button"
-                              className="rounded-xl bg-[#ffcf43] px-4 py-2 text-sm font-extrabold text-[#071a33] shadow hover:brightness-105 transition"
-                              onClick={() => alert(`Mock: generar plan de abastecimiento para "${u.item}"`)}
-                            >
-                              Capturar oportunidad
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-extrabold text-white/90 hover:bg-white/15 transition"
-                              onClick={() => alert(`Mock: buscar proveedores/alianzas para "${u.item}"`)}
-                            >
-                              Buscar aliados
-                            </button>
-                          </div>
+                        <div className="text-right">
+                          <div className="text-accent font-extrabold">{t.total}</div>
+                          <div className="text-muted text-[11px]">volumen</div>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Recommendations */}
-              <div className={`${glassCard} p-6`}>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-white font-extrabold">Recomendaciones</div>
-                    <div className="text-white/60 text-sm">
-                      Acciones sugeridas basadas en señales del mercado.
+              {/* ------------------------------------------------------
+                  🚨 Unmet demand + 💡 Recommendations
+                 ------------------------------------------------------ */}
+              <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                {/* Unmet demand */}
+                <div className={`${glassCard} p-6`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-text font-extrabold">Demanda no atendida</div>
+                      <div className="text-muted text-sm">
+                        Casos donde hubo intención de compra/venta pero no se cerró (stock/capacidad/partner).
+                      </div>
                     </div>
+
+                    <span
+                      className={`${chipBase} ${
+                        theme === "light"
+                          ? "border-red-400/30 bg-red-500/10 text-red-800"
+                          : "border-red-300/25 bg-red-500/15 text-red-200"
+                      }`}
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      Señales críticas
+                    </span>
                   </div>
 
-                  <span className={`${chipBase} border-emerald-300/20 bg-emerald-500/15 text-emerald-200`}>
-                    <Lightbulb className="w-3.5 h-3.5" />
-                    Smart
-                  </span>
-                </div>
+                  {unmet.length === 0 ? (
+                    <div className="mt-5 rounded-2xl border border-border bg-surface/40 p-8 text-center text-muted">
+                      No hay registros de demanda no atendida con estos filtros.
+                    </div>
+                  ) : (
+                    <div className="mt-5 grid gap-3">
+                      {unmet.map((u) => (
+                        <div key={u.id} className="rounded-3xl border border-border bg-surface/40 p-5">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <div className="text-text font-extrabold truncate">{u.item}</div>
+                              <div className="text-muted text-sm mt-1">
+                                {u.sector} • {u.estado}, {u.pais}
+                              </div>
 
-                <div className="mt-5 space-y-3">
-                  {recommendations.map((r) => {
-                    const Icon = r.icon;
-                    return (
-                      <div key={r.id} className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                        <div className="flex items-start gap-3">
-                          <div className="h-10 w-10 rounded-2xl border border-white/10 bg-black/25 flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-yellow-300" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-white font-extrabold">{r.titulo}</div>
-                            <div className="text-white/65 text-sm mt-1">{r.desc}</div>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <span className={`${chipBase} border-border bg-surface/60 text-text/80`}>
+                                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                                  {u.cantidad}
+                                </span>
+                                <span className={`${chipBase} border-border bg-surface/60 text-text/80`}>
+                                  Motivo: {u.motivo}
+                                </span>
+                                <span className={`${chipBase} ${scoreChip(u.score, theme)}`}>
+                                  Opportunity {u.score}%
+                                </span>
+                              </div>
 
-                            <button
-                              type="button"
-                              className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-extrabold text-white/90 hover:bg-white/15 transition"
-                              onClick={() => alert(`Mock: ${r.action}`)}
-                            >
-                              {r.action}
-                              <ArrowUpRight className="w-4 h-4" />
-                            </button>
+                              <div className="mt-3 text-muted text-xs">
+                                Detectado: <span className="text-text/85 font-semibold">{u.fecha}</span> • Empresas:{" "}
+                                <span className="text-text/85 font-semibold">{u.empresas}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                              <button
+                                type="button"
+                                className="rounded-xl bg-accent px-4 py-2 text-sm font-extrabold text-slate-900 shadow-pro hover:brightness-105 transition"
+                                onClick={() => alert(`Mock: generar plan de abastecimiento para "${u.item}"`)}
+                              >
+                                Capturar oportunidad
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-xl border border-border bg-surface/60 px-4 py-2 text-sm font-extrabold text-text hover:bg-surface transition"
+                                onClick={() => alert(`Mock: buscar proveedores/alianzas para "${u.item}"`)}
+                              >
+                                Buscar aliados
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-5 rounded-3xl border border-white/10 bg-black/25 p-5">
-                  <div className="text-white font-extrabold flex items-center gap-2">
-                    <BadgeCheck className="w-5 h-5 text-emerald-300" />
-                    Consejo pro
+                {/* Recommendations */}
+                <div className={`${glassCard} p-6`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-text font-extrabold">Recomendaciones</div>
+                      <div className="text-muted text-sm">Acciones sugeridas basadas en señales del mercado.</div>
+                    </div>
+
+                    <span
+                      className={`${chipBase} ${
+                        theme === "light"
+                          ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-800"
+                          : "border-emerald-300/25 bg-emerald-500/15 text-emerald-200"
+                      }`}
+                    >
+                      <Lightbulb className="w-3.5 h-3.5" />
+                      Smart
+                    </span>
                   </div>
-                  <p className="text-white/65 text-sm mt-2 leading-relaxed">
-                    Si un ítem aparece como tendencia en 2+ semanas y además hay demanda no atendida,
-                    es una señal fuerte para: <strong>comprar inventario</strong>, <strong>conseguir proveedor</strong>{" "}
-                    o <strong>publicar oferta</strong> con condiciones claras.
-                  </p>
+
+                  <div className="mt-5 space-y-3">
+                    {recommendations.map((r) => {
+                      const Icon = r.icon;
+                      return (
+                        <div key={r.id} className="rounded-3xl border border-border bg-surface/40 p-5">
+                          <div className="flex items-start gap-3">
+                            <div className="h-10 w-10 rounded-2xl border border-border bg-surface/60 flex items-center justify-center">
+                              <Icon className="w-5 h-5 text-accent" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-text font-extrabold">{r.titulo}</div>
+                              <div className="text-muted text-sm mt-1">{r.desc}</div>
+
+                              <button
+                                type="button"
+                                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border bg-surface/60 px-4 py-2 text-sm font-extrabold text-text hover:bg-surface transition"
+                                onClick={() => alert(`Mock: ${r.action}`)}
+                              >
+                                {r.action}
+                                <ArrowUpRight className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Consejo final */}
+                  <div className="mt-5 rounded-3xl border border-border bg-surface/50 p-5">
+                    <div className="text-text font-extrabold flex items-center gap-2">
+                      <BadgeCheck className="w-5 h-5 text-emerald-400" />
+                      Consejo pro
+                    </div>
+                    <p className="text-muted text-sm mt-2 leading-relaxed">
+                      Si un ítem aparece como tendencia en 2+ semanas y además hay demanda no atendida,
+                      es una señal fuerte para: <strong className="text-text">comprar inventario</strong>,{" "}
+                      <strong className="text-text">conseguir proveedor</strong> o{" "}
+                      <strong className="text-text">publicar oferta</strong> con condiciones claras.
+                    </p>
+                  </div>
                 </div>
               </div>
+              {/* FIN Unmet + Recommendations */}
             </div>
-
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -580,18 +729,26 @@ export default function Tendencias() {
 
 /* ---------------- Components ---------------- */
 
-function Select({ label, value, onChange, options }) {
+/**
+ * Select reutilizable:
+ * - Respeta theme para el fondo de las opciones (<option>)
+ * - Usa tokens globales para input/select
+ */
+function Select({ theme, label, value, onChange, options }) {
   return (
     <div className="w-full">
-      <div className="text-[11px] text-white/60 mb-1">{label}</div>
+      <div className="text-[11px] text-muted mb-1">{label}</div>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none
-                   focus:ring-2 focus:ring-yellow-400/60"
+        className="w-full rounded-2xl border border-border bg-surface/60 px-4 py-3 text-sm text-text outline-none focus:ring-2 focus:ring-ring/40"
       >
         {options.map((o) => (
-          <option key={o} value={o} className="bg-[#0b1630] text-white">
+          <option
+            key={o}
+            value={o}
+            className={theme === "light" ? "bg-white text-slate-900" : "bg-[#0b1630] text-white"}
+          >
             {o}
           </option>
         ))}
@@ -600,24 +757,33 @@ function Select({ label, value, onChange, options }) {
   );
 }
 
-function Kpi({ title, value, subtitle, icon: Icon, accent }) {
+/**
+ * KPI card:
+ * - accent: good | warn | undefined
+ * - Ajusta borde/fondo según tema
+ */
+function Kpi({ theme, title, value, subtitle, icon: Icon, accent }) {
   const accentClass =
     accent === "good"
-      ? "border-emerald-300/20 bg-emerald-500/10"
+      ? theme === "light"
+        ? "border-emerald-400/30 bg-emerald-500/10"
+        : "border-emerald-300/25 bg-emerald-500/12"
       : accent === "warn"
-      ? "border-amber-300/20 bg-amber-500/10"
-      : "border-white/10 bg-black/55";
+      ? theme === "light"
+        ? "border-amber-400/30 bg-amber-500/10"
+        : "border-amber-300/25 bg-amber-500/12"
+      : "border-border bg-surface/60";
 
   return (
-    <div className={`rounded-3xl border ${accentClass} backdrop-blur-xl shadow-2xl p-5`}>
+    <div className={`rounded-3xl border ${accentClass} backdrop-blur-xl shadow-pro p-5`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-white/65 text-xs font-bold uppercase tracking-wider">{title}</div>
-          <div className="text-white text-2xl font-extrabold mt-2">{value}</div>
-          <div className="text-white/55 text-sm mt-1">{subtitle}</div>
+          <div className="text-muted text-xs font-bold uppercase tracking-wider">{title}</div>
+          <div className="text-text text-2xl font-extrabold mt-2">{value}</div>
+          <div className="text-muted text-sm mt-1">{subtitle}</div>
         </div>
-        <div className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center">
-          <Icon className="w-5 h-5 text-yellow-300" />
+        <div className="h-11 w-11 rounded-2xl border border-border bg-surface/50 flex items-center justify-center">
+          <Icon className="w-5 h-5 text-accent" />
         </div>
       </div>
     </div>

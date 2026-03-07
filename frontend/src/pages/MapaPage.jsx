@@ -1,4 +1,27 @@
 // src/pages/MapaPage.jsx
+/**
+ * MAPA / POSICIÓN EN EL SISTEMA (ECOSYSVAL)
+ * --------------------------------------------------------------------
+ * ✅ Objetivo:
+ * - Visualizar empresas del ecosistema en 2 modos: Mapa y Lista.
+ * - Filtrar por tipo (Cliente / Proveedor / Ambos).
+ * - Buscar por: nombre, productos, servicios, ciudad, estado.
+ * - Permitir "Conectar" con una empresa (navega al formulario-comercio).
+ * - Mostrar métricas rápidas (compras/ventas/restantes/filtrados).
+ * - Mostrar un Accordion con beneficios por nivel (Standard / Platino / Black).
+ *
+ * ✅ Importante (THEME):
+ * - Esta vista es "theme-ready": usa tokens (bg-surface, text-text, border-border...)
+ * - Dark es el default (según tu theme.css). Light aplica con .light en body/html.
+ * - Evitamos hardcode de bg-black/white para que no se rompa en modo claro.
+ * - El fondo (fondo.png) idealmente vive en un layout global, NO aquí.
+ *
+ * ✅ Ajuste visual (línea premium glass del proyecto):
+ * - Panels con glass (bg-surface/60 + backdrop-blur).
+ * - Buscador en glass (sin volverse blanco sólido).
+ * - Pills de tipo (Cliente/Proveedor) adaptadas a theme.
+ */
+
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,10 +34,19 @@ import {
   Handshake,
   Search,
 } from "lucide-react";
+
 import Mapa from "../components/Mapa";
 import SidebarMenu from "../components/SidebarMenu";
 import MainHeader from "../components/MainHeader";
+import { useTheme } from "../components/ThemeProvider";
 
+/**
+ * Data mock (luego: backend)
+ * - id: código o nit
+ * - tipo: Cliente | Proveedor
+ * - productos/servicios: strings demo
+ * - lat/lng: coordenadas para mapa
+ */
 const empresasMock = [
   {
     id: "0000123",
@@ -62,6 +94,10 @@ const empresasMock = [
   },
 ];
 
+/**
+ * Beneficios por nivel (demo)
+ * - tier: standard | platinum | black
+ */
 const beneficiosNiveles = [
   { title: "Perfil empresarial descargable", tier: "standard", detail: "Descarga un PDF con datos clave, actividad y capacidades." },
   { title: "Identificación de socios comerciales", tier: "standard", detail: "Encuentra aliados por sector, ubicación y capacidad." },
@@ -76,24 +112,38 @@ const beneficiosNiveles = [
   { title: "Desarrollo Organizacional Sustentable", tier: "black", detail: "Programas para sostenibilidad, cultura y desempeño." },
 ];
 
+/**
+ * MapaPage
+ * - Contiene filtros, buscador, modo vista, stats y accordion.
+ */
 export default function MapaPage() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
+  // ==========================================================
+  // STATE UI
+  // ==========================================================
   const [viewMode, setViewMode] = useState("map"); // map | list
   const [filterTipo, setFilterTipo] = useState("Ambos"); // Cliente | Proveedor | Ambos
   const [search, setSearch] = useState("");
   const [openBenefitIndex, setOpenBenefitIndex] = useState(null);
 
-  // Stats (demo)
+  // ==========================================================
+  // STATS (demo)
+  // ==========================================================
   const comprasRealizadas = 1;
   const ventasRealizadas = 2;
   const restantesPlatino = 2;
 
+  // ==========================================================
+  // FILTRO + SEARCH (client-side)
+  // ==========================================================
   const empresasFiltradas = useMemo(() => {
     const term = search.trim().toLowerCase();
 
     return empresasMock.filter((e) => {
       const coincideTipo = filterTipo === "Ambos" ? true : e.tipo === filterTipo;
+
       const coincideSearch =
         !term ||
         (e.nombre || "").toLowerCase().includes(term) ||
@@ -108,6 +158,9 @@ export default function MapaPage() {
 
   const sociosPotenciales = empresasFiltradas.length;
 
+  // ==========================================================
+  // ACCIÓN: Conectar (navega con state)
+  // ==========================================================
   const handleConectar = (empresa) => {
     navigate(`/formulario-comercio/`, {
       state: {
@@ -122,205 +175,249 @@ export default function MapaPage() {
     });
   };
 
+  // ==========================================================
+  // OVERLAY PREMIUM (theme-aware)
+  // - No fijamos fondo aquí; asumimos layout global.
+  // ==========================================================
+  const tintCls = theme === "light" ? "bg-white/15" : "bg-black/10";
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <MainHeader />
+    <div className="min-h-screen flex flex-col relative">
+      {/* ==========================================================
+          OVERLAYS (premium)
+          - Glows suaves + tint para contraste
+         ========================================================== */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div
+          className={[
+            "absolute inset-0",
+            "bg-[radial-gradient(1200px_600px_at_10%_10%,rgba(236,182,14,0.14),transparent_55%)]",
+            "bg-[radial-gradient(900px_450px_at_90%_20%,rgba(59,130,246,0.10),transparent_55%)]",
+          ].join(" ")}
+        />
+        <div className={`absolute inset-0 ${tintCls}`} />
+      </div>
 
-      <div className="flex flex-1">
-        <aside className="w-64 h-screen bg-blue-900 text-white shadow-lg overflow-y-auto">
-          <SidebarMenu />
-        </aside>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <MainHeader />
 
-        <main
-          className="flex-1 relative overflow-y-auto"
-          style={{
-            backgroundImage: "url('/fondo.png')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundAttachment: "fixed",
-          }}
-        >
-          {/* overlay para contraste */}
-          <div className="absolute inset-0 bg-black/35 backdrop-blur-[1px] -z-10" />
+        <div className="flex flex-1">
+          {/* ==========================================================
+              SIDEBAR (sin hardcode bg-blue-900)
+             ========================================================== */}
+          <aside className="hidden md:block w-64">
+            <SidebarMenu />
+          </aside>
 
-          <div className="p-6">
-            {/* Header del módulo */}
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
-              <div className="rounded-3xl border border-white/10 bg-black/50 backdrop-blur-xl shadow-xl px-5 py-4">
-                <h1 className="text-white font-extrabold text-lg md:text-xl">
-                  Posición en el sistema
-                </h1>
-                <p className="text-white/70 text-sm mt-1 max-w-2xl">
-                  Visualiza socios potenciales en mapa o lista. Filtra por tipo, sector y ubicación.
-                </p>
-              </div>
+          <main className="flex-1 relative overflow-y-auto">
+            {/* Overlay de contraste leve sobre contenido */}
+            <div className="absolute inset-0 bg-black/10 -z-10" />
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/60 bg-black/60 backdrop-blur-xl shadow-lg px-4 py-2">
-                  <Users className="w-4 h-4 text-white/80" />
-                  <span className="text-sm text-white/80">Resultados:</span>
-                  <span className="text-sm font-extrabold text-yellow-300">{sociosPotenciales}</span>
-                </div>
-
-                <div className="inline-flex rounded-full border border-black/60 bg-black/75 backdrop-blur-xl shadow-lg p-1">
-                  <button
-                    onClick={() => setViewMode("map")}
-                    className={`px-4 py-2 text-sm rounded-full transition inline-flex items-center gap-2 ${
-                      viewMode === "map"
-                        ? "bg-yellow-400 text-slate-900 font-semibold"
-                        : "text-white/80 hover:bg-white/10"
-                    }`}
-                  >
-                    <MapIcon className="w-4 h-4" />
-                    Mapa
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`px-4 py-2 text-sm rounded-full transition inline-flex items-center gap-2 ${
-                      viewMode === "list"
-                        ? "bg-yellow-400 text-slate-900 font-semibold"
-                        : "text-white/80 hover:bg-white/10"
-                    }`}
-                  >
-                    <ListIcon className="w-4 h-4" />
-                    Lista
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Stats premium */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-              <StatCard icon={ShoppingCart} value={comprasRealizadas} label="Compras realizadas" />
-              <StatCard icon={Handshake} value={ventasRealizadas} label="Ventas realizadas" />
-              <StatCard icon={Lock} value={restantesPlatino} label="Restantes para rango Platino" compact />
-              <StatCard icon={Users} value={sociosPotenciales} label="Socios potenciales (filtrados)" highlight />
-            </div>
-
-            {/* Buscador + chips */}
-            <div className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-xl p-4 mb-6">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                <div className="flex-1 relative">
-                  <Search className="w-4 h-4 text-slate-500 absolute left-4 top-3.5" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por nombre, productos, servicios, ciudad, estado..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full rounded-full pl-11 pr-4 py-2.5 text-sm bg-white/90 text-slate-900 placeholder:text-slate-500 outline-none
-                               focus:ring-2 focus:ring-yellow-300/70 transition"
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Chip label="Cliente" active={filterTipo === "Cliente"} onClick={() => setFilterTipo("Cliente")} />
-                  <Chip label="Proveedor" active={filterTipo === "Proveedor"} onClick={() => setFilterTipo("Proveedor")} />
-                  <Chip label="Ambos" active={filterTipo === "Ambos"} onClick={() => setFilterTipo("Ambos")} />
-                </div>
-              </div>
-            </div>
-
-            {/* Layout PRO: mapa sticky + lista (o solo uno según view) */}
-            <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-              {/* Columna Mapa */}
-              {viewMode === "map" && (
-                <section className="rounded-3xl border border-white/10 bg-black/35 backdrop-blur-xl shadow-xl overflow-hidden">
-                  <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-white font-bold">Mapa de socios</h2>
-                      <p className="text-white/60 text-xs">
-                        Usa el zoom y selecciona empresas para ver ubicación.
-                      </p>
-                    </div>
-                    <span className="text-[11px] text-white/70 border border-white/10 bg-white/10 rounded-full px-3 py-1">
-                      Vista interactiva
-                    </span>
-                  </div>
-
-                  <div className="p-4">
-                    <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/20">
-                      <Mapa empresas={empresasFiltradas} zoom={5} />
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* Columna Lista (siempre útil, en map queda al lado) */}
-              {(viewMode === "map" || viewMode === "list") && (
-                <section
-                  className={`rounded-3xl border border-white/10 bg-black/35 backdrop-blur-xl shadow-xl overflow-hidden ${
-                    viewMode === "list" ? "xl:col-span-2" : ""
-                  }`}
-                >
-                  <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-white font-bold">Socios potenciales</h2>
-                      <p className="text-white/60 text-xs">
-                        Filtrados por tu búsqueda y tipo seleccionado.
-                      </p>
-                    </div>
-                    <span className="text-[11px] text-yellow-300 border border-yellow-300/20 bg-yellow-400/10 rounded-full px-3 py-1">
-                      {sociosPotenciales} resultados
-                    </span>
-                  </div>
-
-                  <div className="p-4 max-h-[560px] overflow-y-auto">
-                    <ListaEmpresas empresas={empresasFiltradas} onConectar={handleConectar} />
-                  </div>
-                </section>
-              )}
-            </div>
-
-            {/* Beneficios ACCORDION */}
-            <section className="mt-8">
-              <div className="flex items-end justify-between gap-4 mb-4">
-                <div>
-                  <h2 className="text-white font-extrabold text-lg md:text-xl">
-                    Beneficios del Ecosistema
-                  </h2>
-                  <p className="text-white/60 text-sm">
-                    Despliega cada beneficio para ver qué incluye y el nivel requerido.
+            <div className="p-6">
+              {/* ==========================================================
+                  HEADER DEL MÓDULO
+                 ========================================================== */}
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
+                <div className="rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro px-5 py-4">
+                  <h1 className="text-text font-extrabold text-lg md:text-xl">
+                    Posición en el sistema
+                  </h1>
+                  <p className="text-muted text-sm mt-1 max-w-2xl">
+                    Visualiza socios potenciales en mapa o lista. Filtra por tipo, sector y ubicación.
                   </p>
                 </div>
 
-                <span className="text-[11px] text-white/70 border border-white/10 bg-white/10 rounded-full px-3 py-1">
-                  Standard • Platinum • Black
-                </span>
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                  <div className="inline-flex items-center gap-2 rounded-2xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro px-4 py-2">
+                    <Users className="w-4 h-4 text-muted" />
+                    <span className="text-sm text-muted">Resultados:</span>
+                    <span className="text-sm font-extrabold text-accent">{sociosPotenciales}</span>
+                  </div>
+
+                  {/* Toggle modo vista */}
+                  <div className="inline-flex rounded-full border border-border bg-surface/60 backdrop-blur-xl shadow-pro p-1">
+                    <button
+                      onClick={() => setViewMode("map")}
+                      type="button"
+                      className={`px-4 py-2 text-sm rounded-full transition inline-flex items-center gap-2 ${
+                        viewMode === "map"
+                          ? "bg-accent text-slate-900 font-semibold"
+                          : "text-text hover:bg-surface"
+                      }`}
+                    >
+                      <MapIcon className="w-4 h-4" />
+                      Mapa
+                    </button>
+                    <button
+                      onClick={() => setViewMode("list")}
+                      type="button"
+                      className={`px-4 py-2 text-sm rounded-full transition inline-flex items-center gap-2 ${
+                        viewMode === "list"
+                          ? "bg-accent text-slate-900 font-semibold"
+                          : "text-text hover:bg-surface"
+                      }`}
+                    >
+                      <ListIcon className="w-4 h-4" />
+                      Lista
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                {beneficiosNiveles.map((b, idx) => {
-                  const open = openBenefitIndex === idx;
-                  return (
-                    <AccordionItem
-                      key={idx}
-                      title={b.title}
-                      detail={b.detail}
-                      tier={b.tier}
-                      open={open}
-                      onToggle={() => setOpenBenefitIndex(open ? null : idx)}
-                    />
-                  );
-                })}
+              {/* ==========================================================
+                  STATS
+                 ========================================================== */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+                <StatCard icon={ShoppingCart} value={comprasRealizadas} label="Compras realizadas" />
+                <StatCard icon={Handshake} value={ventasRealizadas} label="Ventas realizadas" />
+                <StatCard icon={Lock} value={restantesPlatino} label="Restantes para rango Platino" compact />
+                <StatCard icon={Users} value={sociosPotenciales} label="Socios potenciales (filtrados)" highlight />
               </div>
-            </section>
-          </div>
-        </main>
+
+              {/* ==========================================================
+                  BUSCADOR + CHIPS FILTRO
+                 ========================================================== */}
+              <div className="rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro p-4 mb-6">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="w-4 h-4 text-muted absolute left-4 top-3.5" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre, productos, servicios, ciudad, estado..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className={[
+                        "w-full rounded-full pl-11 pr-4 py-2.5 text-sm",
+                        "bg-surface/60 border border-border text-text placeholder:text-muted/70",
+                        "outline-none backdrop-blur-md appearance-none bg-clip-padding transition",
+                        "focus:ring-2 focus:ring-ring/40 focus:border-accent/30",
+                      ].join(" ")}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Chip label="Cliente" active={filterTipo === "Cliente"} onClick={() => setFilterTipo("Cliente")} />
+                    <Chip label="Proveedor" active={filterTipo === "Proveedor"} onClick={() => setFilterTipo("Proveedor")} />
+                    <Chip label="Ambos" active={filterTipo === "Ambos"} onClick={() => setFilterTipo("Ambos")} />
+                  </div>
+                </div>
+              </div>
+
+              {/* ==========================================================
+                  LAYOUT PRINCIPAL (Mapa + Lista)
+                 ========================================================== */}
+              <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+                {/* Mapa */}
+                {viewMode === "map" && (
+                  <section className="rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro overflow-hidden">
+                    <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                      <div>
+                        <h2 className="text-text font-bold">Mapa de socios</h2>
+                        <p className="text-muted text-xs">
+                          Usa el zoom y selecciona empresas para ver ubicación.
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-muted border border-border bg-surface/50 rounded-full px-3 py-1">
+                        Vista interactiva
+                      </span>
+                    </div>
+
+                    <div className="p-4">
+                      <div className="rounded-2xl overflow-hidden border border-border bg-surface/50">
+                        <Mapa empresas={empresasFiltradas} zoom={5} />
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* Lista */}
+                {(viewMode === "map" || viewMode === "list") && (
+                  <section
+                    className={`rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro overflow-hidden ${
+                      viewMode === "list" ? "xl:col-span-2" : ""
+                    }`}
+                  >
+                    <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                      <div>
+                        <h2 className="text-text font-bold">Socios potenciales</h2>
+                        <p className="text-muted text-xs">
+                          Filtrados por tu búsqueda y tipo seleccionado.
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-accent border border-accent/25 bg-accent/10 rounded-full px-3 py-1">
+                        {sociosPotenciales} resultados
+                      </span>
+                    </div>
+
+                    <div className="p-4 max-h-[560px] overflow-y-auto">
+                      <ListaEmpresas empresas={empresasFiltradas} onConectar={handleConectar} theme={theme} />
+                    </div>
+                  </section>
+                )}
+              </div>
+
+              {/* ==========================================================
+                  BENEFICIOS (Accordion)
+                 ========================================================== */}
+              <section className="mt-8">
+                <div className="flex items-end justify-between gap-4 mb-4">
+                  <div>
+                    <h2 className="text-text font-extrabold text-lg md:text-xl">
+                      Beneficios del Ecosistema
+                    </h2>
+                    <p className="text-muted text-sm">
+                      Despliega cada beneficio para ver qué incluye y el nivel requerido.
+                    </p>
+                  </div>
+
+                  <span className="text-[11px] text-muted border border-border bg-surface/50 rounded-full px-3 py-1">
+                    Standard • Platinum • Black
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {beneficiosNiveles.map((b, idx) => {
+                    const open = openBenefitIndex === idx;
+                    return (
+                      <AccordionItem
+                        key={idx}
+                        title={b.title}
+                        detail={b.detail}
+                        tier={b.tier}
+                        open={open}
+                        onToggle={() => setOpenBenefitIndex(open ? null : idx)}
+                        theme={theme}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ---------- UI ---------- */
+/* ====================================================================
+   UI COMPONENTS (documentados)
+   ==================================================================== */
 
+/**
+ * Chip (filtro tipo)
+ * - active: usa acento (bg-accent)
+ * - inactive: glass surface
+ */
 function Chip({ label, active, onClick }) {
   return (
     <button
       onClick={onClick}
+      type="button"
       className={`px-4 py-2 rounded-full text-sm border transition ${
         active
-          ? "bg-yellow-400 text-slate-900 border-yellow-400 font-semibold"
-          : "bg-white/10 text-white/85 border-white/10 hover:bg-white/15"
+          ? "bg-accent text-slate-900 border-accent font-semibold"
+          : "bg-surface/50 text-text border-border hover:bg-surface"
       }`}
     >
       {label}
@@ -328,18 +425,23 @@ function Chip({ label, active, onClick }) {
   );
 }
 
+/**
+ * StatCard
+ * - highlight: resalta con acento (para "Socios potenciales").
+ * - compact: reduce tamaño del número.
+ */
 function StatCard({ icon: Icon, value, label, compact = false, highlight = false }) {
   return (
     <div
-      className={`rounded-3xl border backdrop-blur-xl shadow-xl p-4 flex items-center gap-4 ${
-        highlight ? "bg-yellow-400/15 border-yellow-300/30" : "bg-black/40 border-white/10"
+      className={`rounded-3xl border backdrop-blur-xl shadow-pro p-4 flex items-center gap-4 ${
+        highlight ? "bg-accent/10 border-accent/25" : "bg-surface/60 border-border"
       }`}
     >
       <div
         className={`h-11 w-11 rounded-2xl flex items-center justify-center border ${
           highlight
-            ? "bg-yellow-400/15 border-yellow-300/25 text-yellow-300"
-            : "bg-white/10 border-white/10 text-white/80"
+            ? "bg-accent/10 border-accent/25 text-accent"
+            : "bg-surface/50 border-border text-muted"
         }`}
       >
         <Icon className="w-5 h-5" />
@@ -348,12 +450,12 @@ function StatCard({ icon: Icon, value, label, compact = false, highlight = false
       <div className="min-w-0">
         <div
           className={`font-extrabold ${compact ? "text-2xl" : "text-3xl"} ${
-            highlight ? "text-yellow-300" : "text-white"
+            highlight ? "text-accent" : "text-text"
           }`}
         >
           {value}
         </div>
-        <div className={`text-sm ${highlight ? "text-white/85" : "text-white/70"} truncate`}>
+        <div className={`text-sm ${highlight ? "text-text/85" : "text-muted"} truncate`}>
           {label}
         </div>
       </div>
@@ -361,13 +463,15 @@ function StatCard({ icon: Icon, value, label, compact = false, highlight = false
   );
 }
 
-function ListaEmpresas({ empresas, onConectar }) {
+/**
+ * ListaEmpresas
+ * - Render de cards por empresa.
+ * - Pill por tipo (Cliente / Proveedor) theme-aware.
+ * - Botón Conectar: navega y pasa state.
+ */
+function ListaEmpresas({ empresas, onConectar, theme }) {
   if (!empresas.length) {
-    return (
-      <div className="p-10 text-center text-white/70">
-        No hay resultados con esos filtros.
-      </div>
-    );
+    return <div className="p-10 text-center text-muted">No hay resultados con esos filtros.</div>;
   }
 
   return (
@@ -375,43 +479,36 @@ function ListaEmpresas({ empresas, onConectar }) {
       {empresas.map((e) => (
         <div
           key={e.id}
-          className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-xl shadow-lg p-4"
+          className="rounded-2xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro p-4"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-white/60">ID: {e.id}</span>
-                <span
-                  className={`text-[11px] px-2 py-0.5 rounded-full border ${
-                    e.tipo === "Cliente"
-                      ? "bg-emerald-400/10 text-emerald-200 border-emerald-300/20"
-                      : "bg-sky-400/10 text-sky-200 border-sky-300/20"
-                  }`}
-                >
-                  {e.tipo}
-                </span>
+                <span className="text-[11px] text-muted">ID: {e.id}</span>
+                <span className={tipoPill(theme, e.tipo)}>{e.tipo}</span>
               </div>
 
-              <h3 className="mt-1 font-semibold text-white truncate">{e.nombre}</h3>
+              <h3 className="mt-1 font-semibold text-text truncate">{e.nombre}</h3>
 
-              <p className="text-sm text-white/70 mt-1">
-                <span className="text-white/60">Productos:</span> {e.productos}
+              <p className="text-sm text-text/80 mt-1">
+                <span className="text-muted">Productos:</span> {e.productos}
               </p>
 
               {e.servicios && (
-                <p className="text-sm text-white/70">
-                  <span className="text-white/60">Servicios:</span> {e.servicios}
+                <p className="text-sm text-text/80">
+                  <span className="text-muted">Servicios:</span> {e.servicios}
                 </p>
               )}
 
-              <p className="text-sm text-white/60 mt-1">
+              <p className="text-sm text-muted mt-1">
                 📍 {e.ciudad} • {e.estado}
               </p>
             </div>
 
             <button
               onClick={() => onConectar?.(e)}
-              className="shrink-0 rounded-xl bg-yellow-400 px-4 py-2 text-sm font-semibold text-slate-900 shadow hover:brightness-95 transition"
+              type="button"
+              className="shrink-0 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-slate-900 shadow-pro hover:brightness-95 transition"
             >
               Conectar
             </button>
@@ -422,35 +519,61 @@ function ListaEmpresas({ empresas, onConectar }) {
   );
 }
 
-function AccordionItem({ title, detail, tier, open, onToggle }) {
-  const { pill, bar } = getTierStyles(tier);
+/**
+ * tipoPill
+ * - Badge de Cliente/Proveedor con colores que no se pierden en light/dark.
+ */
+function tipoPill(theme, tipo) {
+  const isLight = theme === "light";
+  const base = "text-[11px] px-2 py-0.5 rounded-full border";
+
+  if (tipo === "Cliente") {
+    return `${base} ${
+      isLight
+        ? "bg-emerald-500/10 text-emerald-800 border-emerald-400/25"
+        : "bg-emerald-500/10 text-emerald-200 border-emerald-400/20"
+    }`;
+  }
+  return `${base} ${
+    isLight
+      ? "bg-sky-500/10 text-sky-800 border-sky-400/25"
+      : "bg-sky-500/10 text-sky-200 border-sky-400/20"
+  }`;
+}
+
+/**
+ * AccordionItem
+ * - Item expandible para beneficios por nivel.
+ */
+function AccordionItem({ title, detail, tier, open, onToggle, theme }) {
+  const styles = getTierStyles(tier, theme);
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-xl shadow-lg overflow-hidden">
+    <div className="rounded-2xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-white/5 transition"
+        className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-surface transition"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className={`h-9 w-9 rounded-xl border ${bar} flex items-center justify-center`}>
-            <Lock className="w-4 h-4 text-white/85" />
+          <div className={`h-9 w-9 rounded-xl border ${styles.bar} flex items-center justify-center`}>
+            <Lock className="w-4 h-4 text-text" />
           </div>
 
           <div className="min-w-0 text-left">
-            <div className="text-white font-semibold truncate">{title}</div>
-            <div className={`mt-1 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] ${pill}`}>
+            <div className="text-text font-semibold truncate">{title}</div>
+            <div className={`mt-1 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] ${styles.pill}`}>
               Nivel: {tierLabel(tier)}
             </div>
           </div>
         </div>
 
-        <ChevronDown className={`w-5 h-5 text-white/70 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-5 h-5 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div className="px-4 pb-4 pt-1 text-sm text-white/75">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+        <div className="px-4 pb-4 pt-1 text-sm text-text/80">
+          <div className="rounded-xl border border-border bg-surface/50 p-3">
             {detail || "Detalle no disponible."}
           </div>
         </div>
@@ -459,27 +582,42 @@ function AccordionItem({ title, detail, tier, open, onToggle }) {
   );
 }
 
+/**
+ * Labels tier
+ */
 function tierLabel(tier) {
   if (tier === "standard") return "STANDARD";
   if (tier === "platinum") return "PLATINO";
   return "BLACK";
 }
 
-function getTierStyles(tier) {
+/**
+ * getTierStyles
+ * - Píldora y “bar” del icono según nivel + theme.
+ */
+function getTierStyles(tier, theme) {
+  const isLight = theme === "light";
+
   if (tier === "standard") {
     return {
-      pill: "bg-sky-400/10 text-sky-200 border-sky-300/20",
-      bar: "bg-gradient-to-r from-[#006E90]/70 to-[#004C6D]/70 border-white/10",
+      pill: isLight
+        ? "bg-sky-500/10 text-sky-800 border-sky-400/25"
+        : "bg-sky-500/10 text-sky-200 border-sky-400/20",
+      bar: "bg-surface/50 border-border",
     };
   }
   if (tier === "platinum") {
     return {
-      pill: "bg-yellow-400/10 text-yellow-200 border-yellow-300/20",
-      bar: "bg-gradient-to-r from-[#9A7B4F]/70 to-[#7A5C32]/70 border-white/10",
+      pill: isLight
+        ? "bg-amber-500/10 text-amber-900 border-amber-400/25"
+        : "bg-amber-500/10 text-amber-200 border-amber-400/20",
+      bar: "bg-surface/50 border-border",
     };
   }
   return {
-    pill: "bg-white/10 text-white/80 border-white/15",
-    bar: "bg-gradient-to-r from-[#2D2D2D]/75 to-[#000000]/75 border-white/10",
+    pill: isLight
+      ? "bg-slate-500/10 text-slate-800 border-slate-400/25"
+      : "bg-slate-500/10 text-slate-200 border-slate-300/25",
+    bar: "bg-surface/50 border-border",
   };
 }

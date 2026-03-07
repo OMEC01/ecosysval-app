@@ -5,7 +5,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Inter', sans-serif;
-  background-image: url('/fondo.png'); /* Tu imagen de fondo */
+  /*background-image: url('/fondo.png'); /* Tu imagen de fondo */
   background-size: cover;              /* Mantiene la proporción */
   background-position: center;         /* Centrado */
   background-attachment: fixed;        /* Se queda fijo al hacer scroll */

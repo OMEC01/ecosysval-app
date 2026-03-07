@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import MainHeader from "../components/MainHeader";
 import SidebarMenu from "../components/SidebarMenu";
+import { useTheme } from "../components/ThemeProvider";
 import {
   Inbox,
   Search,
@@ -131,33 +132,61 @@ function fmtDate(iso) {
   }
 }
 
-function chipTipo(tipo) {
+/**
+ * Chips adaptados a theme (dark/light)
+ */
+function chipTipo(tipo, theme) {
+  const isLight = theme === "light";
   return tipo === "Compra"
-    ? "bg-amber-500/15 text-amber-200 border-amber-300/20"
-    : "bg-emerald-500/15 text-emerald-200 border-emerald-300/20";
+    ? isLight
+      ? "bg-amber-500/10 text-amber-800 border-amber-400/25"
+      : "bg-amber-500/15 text-amber-200 border-amber-300/25"
+    : isLight
+    ? "bg-emerald-500/10 text-emerald-800 border-emerald-400/25"
+    : "bg-emerald-500/15 text-emerald-200 border-emerald-300/25";
 }
 
-function chipEstado(e) {
+function chipEstado(e, theme) {
+  const isLight = theme === "light";
   switch (e) {
     case "Nueva":
-      return "bg-sky-500/15 text-sky-200 border-sky-300/20";
+      return isLight
+        ? "bg-sky-500/10 text-sky-800 border-sky-400/25"
+        : "bg-sky-500/15 text-sky-200 border-sky-300/25";
     case "En revisión":
-      return "bg-white/10 text-white/80 border-white/10";
+      return isLight
+        ? "bg-slate-500/10 text-slate-800 border-slate-400/25"
+        : "bg-surface/40 text-text border-border";
     case "Aceptada":
-      return "bg-emerald-500/15 text-emerald-200 border-emerald-300/20";
+      return isLight
+        ? "bg-emerald-500/10 text-emerald-800 border-emerald-400/25"
+        : "bg-emerald-500/15 text-emerald-200 border-emerald-300/25";
     case "Rechazada":
-      return "bg-red-500/15 text-red-200 border-red-300/20";
+      return isLight
+        ? "bg-red-500/10 text-red-800 border-red-400/25"
+        : "bg-red-500/15 text-red-200 border-red-300/25";
     case "Contraoferta":
-      return "bg-violet-500/15 text-violet-200 border-violet-300/20";
+      return isLight
+        ? "bg-violet-500/10 text-violet-800 border-violet-400/25"
+        : "bg-violet-500/15 text-violet-200 border-violet-300/25";
     default:
-      return "bg-white/10 text-white/80 border-white/10";
+      return "bg-surface/40 text-text border-border";
   }
 }
 
-function chipPrioridad(p) {
-  if (p === "Alta") return "bg-red-500/15 text-red-200 border-red-300/20";
-  if (p === "Media") return "bg-amber-500/15 text-amber-200 border-amber-300/20";
-  return "bg-slate-500/15 text-slate-200 border-slate-300/20";
+function chipPrioridad(p, theme) {
+  const isLight = theme === "light";
+  if (p === "Alta")
+    return isLight
+      ? "bg-red-500/10 text-red-800 border-red-400/25"
+      : "bg-red-500/15 text-red-200 border-red-300/25";
+  if (p === "Media")
+    return isLight
+      ? "bg-amber-500/10 text-amber-800 border-amber-400/25"
+      : "bg-amber-500/15 text-amber-200 border-amber-300/25";
+  return isLight
+    ? "bg-slate-500/10 text-slate-800 border-slate-400/25"
+    : "bg-slate-500/15 text-slate-200 border-slate-300/25";
 }
 
 function money(n, currency = "USD") {
@@ -173,6 +202,8 @@ function money(n, currency = "USD") {
 }
 
 export default function Oportunidades() {
+  const { theme } = useTheme();
+
   const [q, setQ] = useState("");
   const [tipo, setTipo] = useState("Todos"); // Todos | Compra | Venta
   const [pais, setPais] = useState("Todos");
@@ -239,352 +270,391 @@ export default function Oportunidades() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-fixed bg-center bg-cover flex flex-col"
-      style={{ backgroundImage: "url('/fondo.png')" }}
-    >
-      <MainHeader showSearch={true} />
+    <div className="min-h-screen flex flex-col relative">
+      {/* ✅ Overlay pro (NO reemplaza fondo global) */}
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div
+          className={[
+            "absolute inset-0",
+            "bg-[radial-gradient(1200px_600px_at_10%_10%,rgba(236,182,14,0.18),transparent_55%)]",
+            "bg-[radial-gradient(900px_450px_at_90%_20%,rgba(59,130,246,0.12),transparent_55%)]",
+          ].join(" ")}
+        />
+      </div>
 
-      <div className="flex flex-1">
-        <aside className="w-64 bg-blue-900 text-white shadow-lg hidden md:block">
-          <SidebarMenu />
-        </aside>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <MainHeader showSearch={true} />
 
-        <main className="flex-1 p-6 relative">
-          <div className="absolute inset-0 bg-black/25 -z-10" />
+        <div className="flex flex-1">
+          {/* Sidebar (SIN azul sólido) */}
+          <aside className="hidden md:block w-64">
+            <SidebarMenu />
+          </aside>
 
-          <div className="mx-auto w-full max-w-6xl space-y-6">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div className="rounded-3xl border border-white/10 bg-black/55 backdrop-blur-xl shadow-2xl px-6 py-5">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 flex items-center justify-center">
-                    <Inbox className="w-5 h-5 text-yellow-300" />
-                  </div>
-                  <div>
-                    <h1 className="text-white font-extrabold text-xl md:text-2xl">
-                      Buzón de oportunidades
-                    </h1>
-                    <p className="text-white/70 text-sm mt-1">
-                      Recibe ofertas de compra y venta de otras empresas. Revisa, prioriza y responde con un clic.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/80">
-                    Nuevas: <strong className="text-yellow-300">{unreadCount}</strong>
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/80">
-                    Plan: <strong className="text-yellow-300">{PLAN_USUARIO}</strong>
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/80">
-                    Tip: guarda oportunidades para revisión y seguimiento.
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  className="rounded-full bg-white/10 border border-white/10 px-5 py-2 text-sm font-extrabold text-white/90 hover:bg-white/15 transition"
-                  type="button"
-                  onClick={() => alert("Mock: refrescar oportunidades")}
-                >
-                  Actualizar
-                </button>
-                <button
-                  className="rounded-full bg-[#ffcf43] px-5 py-2 text-sm font-extrabold text-[#071a33] shadow hover:brightness-105 transition"
-                  type="button"
-                  onClick={() => alert("Mock: abrir preferencias / alertas")}
-                >
-                  Preferencias
-                </button>
-              </div>
-            </div>
-
-            {/* Filtros */}
-            <div className="rounded-3xl border border-white/10 bg-black/55 backdrop-blur-xl shadow-2xl p-5">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                {/* Search */}
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
-                  <input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Buscar por empresa, título, industria o tags..."
-                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/10 border border-white/10 text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-yellow-400/60"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 w-full lg:w-auto">
-                  <Select label="Tipo" value={tipo} onChange={setTipo} options={["Todos", "Compra", "Venta"]} />
-                  <Select label="País" value={pais} onChange={setPais} options={paises} />
-                  <Select label="Estado" value={estadoOpp} onChange={setEstadoOpp} options={estados} />
-                  <Toggle label="Solo verificadas" checked={soloVerificadas} onChange={setSoloVerificadas} />
-                  <Toggle
-                    label={soloGuardadas ? "Guardadas ✓" : "Solo guardadas"}
-                    checked={soloGuardadas}
-                    onChange={setSoloGuardadas}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Layout Inbox */}
-            <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-              {/* Lista */}
-              <section className="rounded-3xl border border-white/10 bg-black/55 backdrop-blur-xl shadow-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-                  <div className="text-white font-extrabold flex items-center gap-2">
-                    <Filter className="w-4 h-4 text-white/70" />
-                    Oportunidades
-                    <span className="text-white/50 text-xs font-semibold">({filtradas.length})</span>
-                  </div>
-                  <div className="text-xs text-white/60">Inbox</div>
-                </div>
-
-                {filtradas.length === 0 ? (
-                  <div className="p-10 text-center text-white/70">
-                    No hay oportunidades con estos filtros.
-                  </div>
-                ) : (
-                  <div className="max-h-[640px] overflow-y-auto">
-                    {filtradas.map((o) => {
-                      const active = o.id === selectedId;
-                      const saved = guardadas.has(o.id);
-                      return (
-                        <button
-                          key={o.id}
-                          type="button"
-                          onClick={() => setSelectedId(o.id)}
-                          className={`w-full text-left px-5 py-4 border-b border-white/10 transition ${
-                            active ? "bg-white/10" : "hover:bg-white/5"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipTipo(o.tipo)}`}>
-                                  {o.tipo === "Compra" ? (
-                                    <span className="inline-flex items-center gap-1">
-                                      <ArrowDownLeft className="w-3.5 h-3.5" /> Compra
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center gap-1">
-                                      <ArrowUpRight className="w-3.5 h-3.5" /> Venta
-                                    </span>
-                                  )}
-                                </span>
-
-                                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipEstado(o.estadoOportunidad)}`}>
-                                  {o.estadoOportunidad}
-                                </span>
-
-                                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipPrioridad(o.prioridad)}`}>
-                                  {o.prioridad}
-                                </span>
-
-                                {o.verificada && (
-                                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/20 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-200">
-                                    <ShieldCheck className="w-3.5 h-3.5" />
-                                    Verificada
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="mt-2 text-sm font-extrabold text-white truncate">
-                                {o.titulo}
-                              </div>
-
-                              <div className="mt-1 text-xs text-white/65 truncate">
-                                {o.empresa} • {o.industria}
-                              </div>
-
-                              <div className="mt-2 flex items-center gap-2 text-xs text-white/60">
-                                <MapPin className="w-4 h-4" />
-                                {o.estado}, {o.pais}
-                                <span className="mx-1 text-white/25">•</span>
-                                <Clock3 className="w-4 h-4" />
-                                {fmtDate(o.fecha)}
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleGuardar(o.id);
-                              }}
-                              className="h-10 w-10 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center"
-                              title={saved ? "Quitar de guardadas" : "Guardar"}
-                            >
-                              {saved ? (
-                                <BookmarkCheck className="w-5 h-5 text-yellow-300" />
-                              ) : (
-                                <Bookmark className="w-5 h-5 text-white/75" />
-                              )}
-                            </button>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-
-              {/* Detalle */}
-              <section className="rounded-3xl border border-white/10 bg-black/55 backdrop-blur-xl shadow-2xl p-6 md:p-8 text-white">
-                {!selected ? (
-                  <div className="p-10 text-center text-white/70">
-                    Selecciona una oportunidad para ver el detalle.
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-5 border-b border-white/10">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipTipo(selected.tipo)}`}>
-                            {selected.tipo}
-                          </span>
-                          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipEstado(selected.estadoOportunidad)}`}>
-                            {selected.estadoOportunidad}
-                          </span>
-                          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipPrioridad(selected.prioridad)}`}>
-                            Prioridad {selected.prioridad}
-                          </span>
-                        </div>
-
-                        <h2 className="mt-3 text-lg md:text-xl font-extrabold">
-                          {selected.titulo}
-                        </h2>
-
-                        <div className="mt-2 text-sm text-white/70">
-                          <strong className="text-white/90">{selected.empresa}</strong> •{" "}
-                          {selected.industria}
-                        </div>
-
-                        <div className="mt-2 text-xs text-white/60 flex flex-wrap items-center gap-3">
-                          <span className="inline-flex items-center gap-2">
-                            <MapPin className="w-4 h-4" />
-                            {selected.estado}, {selected.pais}
-                          </span>
-                          <span className="inline-flex items-center gap-2">
-                            <Clock3 className="w-4 h-4" />
-                            {fmtDate(selected.fecha)}
-                          </span>
-                          <span className="inline-flex items-center gap-2">
-                            <Tags className="w-4 h-4" />
-                            {selected.tags.join(", ")}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 min-w-[220px]">
-                        <div className="text-[11px] text-white/60 uppercase tracking-wider">
-                          Presupuesto estimado
-                        </div>
-                        <div className="text-xl font-extrabold text-yellow-300 mt-1">
-                          {money(selected.presupuesto, selected.moneda)}
-                        </div>
-                        <div className="text-xs text-white/65 mt-2">
-                          Volumen: <span className="text-white/85 font-semibold">{selected.volumen}</span>
-                        </div>
-                        <div className="text-xs text-white/65 mt-1">
-                          Entrega: <span className="text-white/85 font-semibold">{selected.entrega}</span>
-                        </div>
-                        <div className="text-xs text-white/65 mt-1">
-                          Vence: <span className="text-white/85 font-semibold">{selected.vence}</span>
-                        </div>
-                      </div>
+          <main className="flex-1 p-6">
+            <div className="mx-auto w-full max-w-6xl space-y-6">
+              {/* Header */}
+              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div className="rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro px-6 py-5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 rounded-2xl border border-border bg-surface/40 flex items-center justify-center">
+                      <Inbox className="w-5 h-5 text-accent" />
                     </div>
-
-                    {/* Descripción */}
-                    <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-5">
-                      <div className="text-sm font-extrabold">Descripción</div>
-                      <p className="text-sm text-white/75 mt-2 leading-relaxed whitespace-pre-wrap">
-                        {selected.descripcion}
+                    <div>
+                      <h1 className="text-text font-extrabold text-xl md:text-2xl">
+                        Buzón de oportunidades
+                      </h1>
+                      <p className="text-muted text-sm mt-1">
+                        Recibe ofertas de compra y venta de otras empresas. Revisa, prioriza y responde con un clic.
                       </p>
                     </div>
+                  </div>
 
-                    {/* Adjuntos */}
-                    <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-5">
-                      <div className="text-sm font-extrabold">Adjuntos</div>
-                      {selected.adjuntos.length === 0 ? (
-                        <div className="text-sm text-white/60 mt-2">No hay adjuntos.</div>
-                      ) : (
-                        <div className="mt-3 space-y-2">
-                          {selected.adjuntos.map((a) => (
-                            <div
-                              key={a.id}
-                              className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-3"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <FileText className="w-4 h-4 text-white/70" />
-                                <div className="truncate">
-                                  <div className="text-sm font-semibold truncate">{a.nombre}</div>
+                  <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full border border-border bg-surface/40 px-3 py-1 text-text">
+                      Nuevas: <strong className="text-accent">{unreadCount}</strong>
+                    </span>
+                    <span className="rounded-full border border-border bg-surface/40 px-3 py-1 text-text">
+                      Plan: <strong className="text-accent">{PLAN_USUARIO}</strong>
+                    </span>
+                    <span className="rounded-full border border-border bg-surface/40 px-3 py-1 text-text">
+                      Tip: guarda oportunidades para revisión y seguimiento.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    className="rounded-full bg-surface/60 border border-border px-5 py-2 text-sm font-extrabold text-text hover:bg-surface transition shadow-pro"
+                    type="button"
+                    onClick={() => alert("Mock: refrescar oportunidades")}
+                  >
+                    Actualizar
+                  </button>
+                  <button
+                    className="rounded-full bg-accent px-5 py-2 text-sm font-extrabold text-slate-900 shadow-pro hover:brightness-105 transition"
+                    type="button"
+                    onClick={() => alert("Mock: abrir preferencias / alertas")}
+                  >
+                    Preferencias
+                  </button>
+                </div>
+              </div>
+
+              {/* Filtros */}
+              <div className="rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro p-5">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  {/* Search */}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                    <input
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder="Buscar por empresa, título, industria o tags..."
+                      className="w-full pl-11 pr-4 py-3 rounded-2xl bg-surface/60 border border-border text-text placeholder:text-muted/70 outline-none focus:ring-2 focus:ring-ring/40"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 w-full lg:w-auto">
+                    <Select theme={theme} label="Tipo" value={tipo} onChange={setTipo} options={["Todos", "Compra", "Venta"]} />
+                    <Select theme={theme} label="País" value={pais} onChange={setPais} options={paises} />
+                    <Select theme={theme} label="Estado" value={estadoOpp} onChange={setEstadoOpp} options={estados} />
+                    <Toggle label="Solo verificadas" checked={soloVerificadas} onChange={setSoloVerificadas} />
+                    <Toggle
+                      label={soloGuardadas ? "Guardadas ✓" : "Solo guardadas"}
+                      checked={soloGuardadas}
+                      onChange={setSoloGuardadas}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Layout Inbox */}
+              <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+                {/* Lista */}
+                <section className="rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro overflow-hidden">
+                  <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                    <div className="text-text font-extrabold flex items-center gap-2">
+                      <Filter className="w-4 h-4 text-muted" />
+                      Oportunidades
+                      <span className="text-muted text-xs font-semibold">({filtradas.length})</span>
+                    </div>
+                    <div className="text-xs text-muted">Inbox</div>
+                  </div>
+
+                  {filtradas.length === 0 ? (
+                    <div className="p-10 text-center text-muted">
+                      No hay oportunidades con estos filtros.
+                    </div>
+                  ) : (
+                    <div className="max-h-[640px] overflow-y-auto">
+                      {filtradas.map((o) => {
+                        const active = o.id === selectedId;
+                        const saved = guardadas.has(o.id);
+                        return (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => setSelectedId(o.id)}
+                            className={`w-full text-left px-5 py-4 border-b border-border transition ${
+                              active ? "bg-surface/70" : "hover:bg-surface/50"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipTipo(
+                                      o.tipo,
+                                      theme
+                                    )}`}
+                                  >
+                                    {o.tipo === "Compra" ? (
+                                      <span className="inline-flex items-center gap-1">
+                                        <ArrowDownLeft className="w-3.5 h-3.5" /> Compra
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1">
+                                        <ArrowUpRight className="w-3.5 h-3.5" /> Venta
+                                      </span>
+                                    )}
+                                  </span>
+
+                                  <span
+                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipEstado(
+                                      o.estadoOportunidad,
+                                      theme
+                                    )}`}
+                                  >
+                                    {o.estadoOportunidad}
+                                  </span>
+
+                                  <span
+                                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipPrioridad(
+                                      o.prioridad,
+                                      theme
+                                    )}`}
+                                  >
+                                    {o.prioridad}
+                                  </span>
+
+                                  {o.verificada && (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-500/15 px-3 py-1 text-[11px] font-semibold text-emerald-200">
+                                      <ShieldCheck className="w-3.5 h-3.5" />
+                                      Verificada
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="mt-2 text-sm font-extrabold text-text truncate">
+                                  {o.titulo}
+                                </div>
+
+                                <div className="mt-1 text-xs text-muted truncate">
+                                  {o.empresa} • {o.industria}
+                                </div>
+
+                                <div className="mt-2 flex items-center gap-2 text-xs text-muted">
+                                  <MapPin className="w-4 h-4" />
+                                  {o.estado}, {o.pais}
+                                  <span className="mx-1 opacity-40">•</span>
+                                  <Clock3 className="w-4 h-4" />
+                                  {fmtDate(o.fecha)}
                                 </div>
                               </div>
+
                               <button
                                 type="button"
-                                className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-bold hover:bg-white/15 transition"
-                                onClick={() => alert("Mock: abrir/descargar adjunto")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleGuardar(o.id);
+                                }}
+                                className="h-10 w-10 rounded-2xl border border-border bg-surface/40 hover:bg-surface flex items-center justify-center"
+                                title={saved ? "Quitar de guardadas" : "Guardar"}
                               >
-                                Abrir
+                                {saved ? (
+                                  <BookmarkCheck className="w-5 h-5 text-accent" />
+                                ) : (
+                                  <Bookmark className="w-5 h-5 text-muted" />
+                                )}
                               </button>
                             </div>
-                          ))}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+
+                {/* Detalle */}
+                <section className="rounded-3xl border border-border bg-surface/60 backdrop-blur-xl shadow-pro p-6 md:p-8 text-text">
+                  {!selected ? (
+                    <div className="p-10 text-center text-muted">
+                      Selecciona una oportunidad para ver el detalle.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-5 border-b border-border">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipTipo(
+                                selected.tipo,
+                                theme
+                              )}`}
+                            >
+                              {selected.tipo}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipEstado(
+                                selected.estadoOportunidad,
+                                theme
+                              )}`}
+                            >
+                              {selected.estadoOportunidad}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${chipPrioridad(
+                                selected.prioridad,
+                                theme
+                              )}`}
+                            >
+                              Prioridad {selected.prioridad}
+                            </span>
+                          </div>
+
+                          <h2 className="mt-3 text-lg md:text-xl font-extrabold">
+                            {selected.titulo}
+                          </h2>
+
+                          <div className="mt-2 text-sm text-muted">
+                            <strong className="text-text">{selected.empresa}</strong> •{" "}
+                            {selected.industria}
+                          </div>
+
+                          <div className="mt-2 text-xs text-muted flex flex-wrap items-center gap-3">
+                            <span className="inline-flex items-center gap-2">
+                              <MapPin className="w-4 h-4" />
+                              {selected.estado}, {selected.pais}
+                            </span>
+                            <span className="inline-flex items-center gap-2">
+                              <Clock3 className="w-4 h-4" />
+                              {fmtDate(selected.fecha)}
+                            </span>
+                            <span className="inline-flex items-center gap-2">
+                              <Tags className="w-4 h-4" />
+                              {selected.tags.join(", ")}
+                            </span>
+                          </div>
                         </div>
-                      )}
-                    </div>
 
-                    {/* Acciones */}
-                    <div className="mt-6 pt-5 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-extrabold text-white/90 hover:bg-white/15 transition"
-                          onClick={() => alert("Mock: abrir chat con empresa")}
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                          Abrir chat
-                        </button>
-
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-extrabold text-white/90 hover:bg-white/15 transition"
-                          onClick={() => alert("Mock: generar contraoferta")}
-                        >
-                          <Send className="w-4 h-4" />
-                          Contraoferta
-                        </button>
+                        <div className="rounded-2xl border border-border bg-surface/40 p-4 min-w-[220px]">
+                          <div className="text-[11px] text-muted uppercase tracking-wider">
+                            Presupuesto estimado
+                          </div>
+                          <div className="text-xl font-extrabold text-accent mt-1">
+                            {money(selected.presupuesto, selected.moneda)}
+                          </div>
+                          <div className="text-xs text-muted mt-2">
+                            Volumen: <span className="text-text font-semibold">{selected.volumen}</span>
+                          </div>
+                          <div className="text-xs text-muted mt-1">
+                            Entrega: <span className="text-text font-semibold">{selected.entrega}</span>
+                          </div>
+                          <div className="text-xs text-muted mt-1">
+                            Vence: <span className="text-text font-semibold">{selected.vence}</span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-500/15 px-5 py-3 text-sm font-extrabold text-emerald-100 hover:bg-emerald-500/20 transition"
-                          onClick={() => setEstadoLocal(selected.id, "Aceptada")}
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          Aceptar
-                        </button>
-
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300/20 bg-red-500/15 px-5 py-3 text-sm font-extrabold text-red-100 hover:bg-red-500/20 transition"
-                          onClick={() => setEstadoLocal(selected.id, "Rechazada")}
-                        >
-                          <XCircle className="w-4 h-4" />
-                          Rechazar
-                        </button>
+                      {/* Descripción */}
+                      <div className="mt-6 rounded-3xl border border-border bg-surface/40 p-5">
+                        <div className="text-sm font-extrabold">Descripción</div>
+                        <p className="text-sm text-muted mt-2 leading-relaxed whitespace-pre-wrap">
+                          {selected.descripcion}
+                        </p>
                       </div>
-                    </div>
-                  </>
-                )}
-              </section>
+
+                      {/* Adjuntos */}
+                      <div className="mt-5 rounded-3xl border border-border bg-surface/40 p-5">
+                        <div className="text-sm font-extrabold">Adjuntos</div>
+                        {selected.adjuntos.length === 0 ? (
+                          <div className="text-sm text-muted mt-2">No hay adjuntos.</div>
+                        ) : (
+                          <div className="mt-3 space-y-2">
+                            {selected.adjuntos.map((a) => (
+                              <div
+                                key={a.id}
+                                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface/50 p-3"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <FileText className="w-4 h-4 text-muted" />
+                                  <div className="truncate">
+                                    <div className="text-sm font-semibold truncate">{a.nombre}</div>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="rounded-xl border border-border bg-surface/60 px-3 py-2 text-xs font-bold hover:bg-surface transition"
+                                  onClick={() => alert("Mock: abrir/descargar adjunto")}
+                                >
+                                  Abrir
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Acciones */}
+                      <div className="mt-6 pt-5 border-t border-border flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-5 py-3 text-sm font-extrabold text-text hover:bg-surface transition"
+                            onClick={() => alert("Mock: abrir chat con empresa")}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Abrir chat
+                          </button>
+
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface/60 px-5 py-3 text-sm font-extrabold text-text hover:bg-surface transition"
+                            onClick={() => alert("Mock: generar contraoferta")}
+                          >
+                            <Send className="w-4 h-4" />
+                            Contraoferta
+                          </button>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/15 px-5 py-3 text-sm font-extrabold text-emerald-100 hover:bg-emerald-500/20 transition"
+                            onClick={() => setEstadoLocal(selected.id, "Aceptada")}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Aceptar
+                          </button>
+
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-500/15 px-5 py-3 text-sm font-extrabold text-red-100 hover:bg-red-500/20 transition"
+                            onClick={() => setEstadoLocal(selected.id, "Rechazada")}
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Rechazar
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </section>
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -592,18 +662,17 @@ export default function Oportunidades() {
 
 /* ---------------- Small UI components ---------------- */
 
-function Select({ label, value, onChange, options }) {
+function Select({ theme, label, value, onChange, options }) {
   return (
     <div className="w-full">
-      <div className="text-[11px] text-white/60 mb-1">{label}</div>
+      <div className="text-[11px] text-muted mb-1">{label}</div>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none
-                   focus:ring-2 focus:ring-yellow-400/60"
+        className="w-full rounded-2xl border border-border bg-surface/60 px-4 py-3 text-sm text-text outline-none focus:ring-2 focus:ring-ring/40"
       >
         {options.map((o) => (
-          <option key={o} value={o} className="bg-[#0b1630] text-white">
+          <option key={o} value={o} className={theme === "light" ? "bg-white text-slate-900" : "bg-[#0b1630] text-white"}>
             {o}
           </option>
         ))}
@@ -619,10 +688,11 @@ function Toggle({ label, checked, onChange }) {
       onClick={() => onChange(!checked)}
       className={`w-full rounded-2xl border px-4 py-3 text-sm font-extrabold transition ${
         checked
-          ? "border-yellow-300/30 bg-yellow-300/15 text-yellow-100"
-          : "border-white/10 bg-white/10 text-white/85 hover:bg-white/15"
+          ? "border-emerald-400/25 bg-emerald-500/15 text-emerald-200"
+          : "border-border bg-surface/60 text-text hover:bg-surface"
       }`}
       title={label}
+      aria-pressed={checked}
     >
       {label}
     </button>

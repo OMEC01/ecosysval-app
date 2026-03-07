@@ -1,0 +1,35 @@
+/* src/styles/theme.css */
+
+/* CLARO (default) */
+:root {
+  --bg: 248 250 252;
+  --surface: 255 255 255;
+  --surface-2: 241 245 249;
+  --text: 15 23 42;
+  --muted: 100 116 139;
+  --border: 226 232 240;
+
+  --accent: 236 182 14;
+  --ring: 236 182 14;
+  --shadow: 15 23 42;
+
+  /* ✅ Fondo por tema */
+  --bg-image: url("../assets/claro.png");
+}
+
+/* OSCURO */
+html[data-theme="dark"] {
+  --bg: 17 24 39;
+  --surface: 31 41 55;
+  --surface-2: 55 65 81;
+  --text: 241 245 249;
+  --muted: 148 163 184;
+  --border: 71 85 105;
+
+  --accent: 236 182 14;
+  --ring: 236 182 14;
+  --shadow: 0 0 0;
+
+  /* ✅ Fondo por tema */
+  --bg-image: url("../assets/oscuro.png");
+}

@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ===== Tema global (claro/oscuro) ===== */
+html,
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--text));
+  min-height: 100vh;
+}
+
+/* ✅ Fondo de imagen dependiente del tema */
+body {
+  background-image: var(--bg-image);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+* {
+  border-color: rgb(var(--border));
+}

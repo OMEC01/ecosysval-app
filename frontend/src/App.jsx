@@ -34,6 +34,10 @@ import Grupos from "./pages/Grupos";
 import Alianzas from "./pages/Alianzas";
 import Oportunidades from "./pages/Oportunidades";
 import Tendencias from "./pages/Tendencias";
+import Recomendaciones from "./pages/Recomendaciones";
+import Favoritos from "./pages/Favoritos";
+import Contactos from "./pages/Contactos";
+import Eventos from "./pages/Eventos";
 function AppContent() {
   const location = useLocation();
 
@@ -82,6 +86,10 @@ function AppContent() {
           <Route path="/alianzas" element={<Alianzas />} />
           <Route path="/oportunidades" element={<Oportunidades />} />
           <Route path="/tendencias" element={<Tendencias />} />
+          <Route path="/recomendaciones" element={<Recomendaciones />} />
+          <Route path="/favoritos" element={<Favoritos />} />
+          <Route path="/contactos" element={<Contactos />} />
+          <Route path="/eventos" element={<Eventos />} />
         </Routes>
       </div>
     </>
