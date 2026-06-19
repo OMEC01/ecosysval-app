@@ -40,6 +40,9 @@ import { EmpleoModule } from "./empleo/empleo.module";
           autoLoadEntities: true,
           synchronize: true,
           entities: [User, Post],
+          ssl: {
+            rejectUnauthorized: false,
+          },
         };
       },
     }),
