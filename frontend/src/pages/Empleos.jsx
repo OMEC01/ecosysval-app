@@ -30,7 +30,7 @@ import { useTheme } from "../components/ThemeProvider";
 /**
  * URL del backend (ajústala si tu API está en otro puerto/ruta)
  */
-const API_URL = "http://localhost:3000/empleos";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 export default function Empleos() {
   const { theme } = useTheme(); // por si luego quieres ajustar detalles por theme
