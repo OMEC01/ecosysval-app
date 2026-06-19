@@ -32,7 +32,7 @@ import SidebarMenu from "../components/SidebarMenu";
 import MainHeader from "../components/MainHeader";
 
 /** Backend base URL (Vite). En otro PC solo cambias .env */
-const API_URL = import.meta?.env?.VITE_API_URL || "http://localhost:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 /**
  * ✅ NOTA:

@@ -48,7 +48,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 /** URL base del backend (cuando conectes endpoint real) */
-const API_URL = import.meta?.env?.VITE_API_URL || "http://localhost:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 /** Mock inicial (luego lo reemplazas por backend) */
 const recomendacionesMock = [

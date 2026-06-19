@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { notificacionesMock } from "../data/notificacionesMock";
 import { mensajesMock } from "../data/mensajesMock";
 
-const API_URL = "http://localhost:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 export default function MainHeader({ showSearch = true, showBack = false }) {
   const [user, setUser] = useState(null);

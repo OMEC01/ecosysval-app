@@ -34,7 +34,7 @@ import {
  *   reemplace el background-image global.
  */
 
-const API_URL = import.meta?.env?.VITE_API_URL || "http://localhost:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 export default function Ajustes() {
   // ✅ Leer usuario desde localStorage de forma segura
