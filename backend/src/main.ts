@@ -18,7 +18,12 @@ async function bootstrap() {
 
   // ✅ Habilitar CORS para tu frontend (React)
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
+    origin: [
+      'http://localhost:3001',
+      'http://127.0.0.1:3001',
+      'https://ecosysval-app.vercel.app',
+      /\.vercel\.app$/,
+    ],
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -28,8 +33,8 @@ async function bootstrap() {
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
   // ✅ Puerto de ejecución del backend
-  const PORT = 3000;
-  await app.listen(PORT);
+  const PORT = process.env.PORT || 3000;
+  await app.listen(PORT, '0.0.0.0');
 
   console.log(`🚀 Backend corriendo en http://localhost:${PORT}`);
   console.log(`🖼️ Archivos disponibles en http://localhost:${PORT}/uploads`);

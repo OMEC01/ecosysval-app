@@ -40,7 +40,7 @@ import MainHeader from "../components/MainHeader";
  */
 
 // ✅ Base URL del backend (Vite). Si no existe, usa localhost.
-const API_URL = import.meta?.env?.VITE_API_URL || "http://localhost:3000";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 /** Normaliza rutas que pueden venir con o sin "/" inicial */
 function normalizePath(p) {

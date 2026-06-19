@@ -21,7 +21,7 @@ import { Loader2, RefreshCcw } from "lucide-react";
  */
 
 // ✅ Base URL del backend (Vite). Si no existe, usa localhost.
-const API_BASE = import.meta?.env?.VITE_API_URL || "http://localhost:3000";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 export default function Inicio() {
   const [posts, setPosts] = useState([]);
