@@ -4,6 +4,9 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from "react-route
 // Navbar en components
 import Navbar from "./components/Navbar";
 
+// NUEVO IMPORT: Componente para proteger rutas
+import ProtectedRoute from "./components/ProtectedRoute";
+
 // Pages
 import Inicio from "./pages/Inicio";
 import Login from "./pages/Login";
@@ -11,6 +14,9 @@ import Register from "./pages/Register";
 import Subscribe from "./pages/Subscribe";
 import Profile from "./pages/Profile";
 import Perfil from "./pages/Perfil";
+import AdminLayout from "./components/AdminLayout";
+import AdminUsuarios from "./pages/AdminUsuarios";
+import AdminEmpresas from "./pages/AdminEmpresas";
 import MapaPage from "./pages/MapaPage";
 import Cursos from "./pages/Cursos";
 import FormularioComercio from "./pages/FormularioComercio";
@@ -38,6 +44,10 @@ import Recomendaciones from "./pages/Recomendaciones";
 import Favoritos from "./pages/Favoritos";
 import Contactos from "./pages/Contactos";
 import Eventos from "./pages/Eventos";
+
+// NUEVA PÁGINA: Panel de Administrador
+import Admin from "./pages/Admin";
+
 function AppContent() {
   const location = useLocation();
 
@@ -90,6 +100,21 @@ function AppContent() {
           <Route path="/favoritos" element={<Favoritos />} />
           <Route path="/contactos" element={<Contactos />} />
           <Route path="/eventos" element={<Eventos />} />
+          
+          {/* RUTAS DEL PANEL DE ADMIN (todas protegidas) */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+          <Route index element={<Admin />} />
+          <Route path="usuarios" element={<AdminUsuarios />} />
+          <Route path="empresas" element={<AdminEmpresas />} />
+          
+        </Route>
         </Routes>
       </div>
     </>
