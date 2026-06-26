@@ -15,7 +15,8 @@ import {
   Calendar,
   Briefcase,
   Target,
-  Award
+  Award,
+  Edit2
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
@@ -27,7 +28,32 @@ function AdminEmpresas() {
   const [filtroAmbito, setFiltroAmbito] = useState("todos");
   const [modalDetalle, setModalDetalle] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
+  const [modalEditar, setModalEditar] = useState(null);
   const [mensaje, setMensaje] = useState(null);
+  const [datosEditar, setDatosEditar] = useState({
+    razonSocial: "",
+    correo: "",
+    representante: "",
+    paginaWeb: "",
+    ambito: "",
+    ubicacion: "",
+    sucursales: "",
+    volumenVentas: "",
+    empleados: 0,
+    antiguedad: "",
+    importaciones: false,
+    exportaciones: false,
+    socios: "",
+    mision: "",
+    vision: "",
+    objetivos: "",
+    productos: "",
+    servicios: "",
+    scianCodigo: "",
+    scianDescripcion: "",
+  });
+  const [guardando, setGuardando] = useState(false);
+  const [errorModal, setErrorModal] = useState(null);
 
   useEffect(() => {
     cargarEmpresas();
@@ -55,6 +81,95 @@ function AdminEmpresas() {
   const mostrarMensaje = (tipo, texto) => {
     setMensaje({ tipo, texto });
     setTimeout(() => setMensaje(null), 4000);
+  };
+
+  // Abrir modal de edición
+  const abrirEdicion = (empresa) => {
+    setDatosEditar({
+      razonSocial: empresa.razonSocial || "",
+      correo: empresa.correo || "",
+      representante: empresa.representante || "",
+      paginaWeb: empresa.paginaWeb || "",
+      ambito: empresa.ambito || "",
+      ubicacion: empresa.ubicacion || "",
+      sucursales: empresa.sucursales || "",
+      volumenVentas: empresa.volumenVentas || "",
+      empleados: empresa.empleados || 0,
+      antiguedad: empresa.antiguedad || "",
+      importaciones: empresa.importaciones || false,
+      exportaciones: empresa.exportaciones || false,
+      socios: empresa.socios || "",
+      mision: empresa.mision || "",
+      vision: empresa.vision || "",
+      objetivos: empresa.objetivos || "",
+      productos: empresa.productos || "",
+      servicios: empresa.servicios || "",
+      scianCodigo: empresa.scianCodigo || "",
+      scianDescripcion: empresa.scianDescripcion || "",
+    });
+    setErrorModal(null);
+    setModalEditar(empresa);
+  };
+
+  // Guardar cambios de la empresa
+  const guardarEmpresa = async () => {
+    setErrorModal(null);
+
+    // Validaciones
+    if (!datosEditar.razonSocial || datosEditar.razonSocial.trim().length < 3) {
+      setErrorModal("La razón social debe tener al menos 3 caracteres");
+      return;
+    }
+
+    if (!datosEditar.correo || !datosEditar.correo.includes("@")) {
+      setErrorModal("Correo electrónico inválido");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(datosEditar.correo)) {
+      setErrorModal("El formato del correo no es válido");
+      return;
+    }
+
+    if (!datosEditar.representante || datosEditar.representante.trim().length < 3) {
+      setErrorModal("El representante es obligatorio");
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      const token = localStorage.getItem("token");
+      
+      // Convertir empleados a número
+      const dataToSend = {
+        ...datosEditar,
+        empleados: Number(datosEditar.empleados) || 0,
+      };
+      
+      const res = await fetch(`${API_URL}/empresas/${modalEditar.id}`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(dataToSend),
+      });
+      
+      if (res.ok) {
+        mostrarMensaje("exito", "Empresa actualizada correctamente");
+        setModalEditar(null);
+        cargarEmpresas();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setErrorModal(errorData.message || "Error al actualizar empresa");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setErrorModal("Error de conexión con el servidor");
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const eliminarEmpresa = async () => {
@@ -250,6 +365,15 @@ function AdminEmpresas() {
                         >
                           <Eye size={18} />
                         </button>
+
+                        {/* NUEVO: Botón Editar */}
+                        <button
+                          onClick={() => abrirEdicion(empresa)}
+                          className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
+                          title="Editar empresa"
+                        >
+                          <Edit2 size={18} />
+                        </button>
                         
                         <button
                           onClick={() => setModalEliminar(empresa)}
@@ -430,6 +554,403 @@ function AdminEmpresas() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE EDICIÓN */}
+        {modalEditar && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-yellow-500/30 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="bg-yellow-500/20 p-3 rounded-lg">
+                    <Edit2 size={24} className="text-yellow-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Editar Empresa</h3>
+                    <p className="text-xs text-gray-400">ID: #{modalEditar.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setModalEditar(null)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Formulario */}
+              <div className="space-y-6">
+                
+                {/* SECCIÓN: INFORMACIÓN BÁSICA */}
+                <div>
+                  <h4 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                    <Building2 size={16} />
+                    INFORMACIÓN BÁSICA
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Razón Social <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.razonSocial}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, razonSocial: e.target.value })}
+                        placeholder="Nombre legal de la empresa"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Correo <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={datosEditar.correo}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, correo: e.target.value })}
+                        placeholder="contacto@empresa.com"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Representante <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.representante}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, representante: e.target.value })}
+                        placeholder="Nombre completo"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Página Web
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.paginaWeb}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, paginaWeb: e.target.value })}
+                        placeholder="https://www.empresa.com"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECCIÓN: UBICACIÓN */}
+                <div>
+                  <h4 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                    <MapPin size={16} />
+                    UBICACIÓN
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Ámbito
+                      </label>
+                      <select
+                        value={datosEditar.ambito}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, ambito: e.target.value })}
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="Local">Local</option>
+                        <option value="Regional">Regional</option>
+                        <option value="Nacional">Nacional</option>
+                        <option value="Internacional">Internacional</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Ubicación
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.ubicacion}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, ubicacion: e.target.value })}
+                        placeholder="Ciudad, Estado"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Sucursales
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.sucursales}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, sucursales: e.target.value })}
+                        placeholder="Lista de ciudades con sucursales"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECCIÓN: NEGOCIO */}
+                <div>
+                  <h4 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                    <TrendingUp size={16} />
+                    INFORMACIÓN DEL NEGOCIO
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Volumen de Ventas
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.volumenVentas}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, volumenVentas: e.target.value })}
+                        placeholder="Ej: 5000000"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Empleados
+                      </label>
+                      <input
+                        type="number"
+                        value={datosEditar.empleados}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, empleados: e.target.value })}
+                        placeholder="0"
+                        min="0"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Antigüedad (años)
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.antiguedad}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, antiguedad: e.target.value })}
+                        placeholder="Ej: 10"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Checkboxes Importaciones / Exportaciones */}
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <label className="flex items-center gap-3 cursor-pointer bg-black/30 p-3 rounded-lg hover:bg-black/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={datosEditar.importaciones}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, importaciones: e.target.checked })}
+                        className="w-5 h-5 accent-yellow-500"
+                      />
+                      <span className="text-sm font-medium">Realiza Importaciones</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer bg-black/30 p-3 rounded-lg hover:bg-black/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={datosEditar.exportaciones}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, exportaciones: e.target.checked })}
+                        className="w-5 h-5 accent-yellow-500"
+                      />
+                      <span className="text-sm font-medium">Realiza Exportaciones</span>
+                    </label>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Socios Comerciales
+                    </label>
+                    <input
+                      type="text"
+                      value={datosEditar.socios}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, socios: e.target.value })}
+                      placeholder="Nombres de socios principales"
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                    />
+                  </div>
+                </div>
+
+                {/* SECCIÓN: MISIÓN / VISIÓN / OBJETIVOS */}
+                <div>
+                  <h4 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                    <Target size={16} />
+                    MISIÓN Y VISIÓN
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Misión
+                      </label>
+                      <textarea
+                        value={datosEditar.mision}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, mision: e.target.value })}
+                        placeholder="Razón de ser de la empresa..."
+                        rows={3}
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Visión
+                      </label>
+                      <textarea
+                        value={datosEditar.vision}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, vision: e.target.value })}
+                        placeholder="Hacia dónde se proyecta la empresa..."
+                        rows={3}
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Objetivos
+                      </label>
+                      <textarea
+                        value={datosEditar.objetivos}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, objetivos: e.target.value })}
+                        placeholder="Objetivos estratégicos..."
+                        rows={3}
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECCIÓN: PRODUCTOS Y SERVICIOS */}
+                <div>
+                  <h4 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                    <Briefcase size={16} />
+                    PRODUCTOS Y SERVICIOS
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Productos
+                      </label>
+                      <textarea
+                        value={datosEditar.productos}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, productos: e.target.value })}
+                        placeholder="Lista de productos..."
+                        rows={3}
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Servicios
+                      </label>
+                      <textarea
+                        value={datosEditar.servicios}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, servicios: e.target.value })}
+                        placeholder="Lista de servicios..."
+                        rows={3}
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECCIÓN: SCIAN */}
+                <div>
+                  <h4 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                    <Award size={16} />
+                    CLASIFICACIÓN SCIAN
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Código SCIAN
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.scianCodigo}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, scianCodigo: e.target.value })}
+                        placeholder="Ej: 511210"
+                        maxLength={10}
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold mb-2 text-gray-300">
+                        Descripción SCIAN
+                      </label>
+                      <input
+                        type="text"
+                        value={datosEditar.scianDescripcion}
+                        onChange={(e) => setDatosEditar({ ...datosEditar, scianDescripcion: e.target.value })}
+                        placeholder="Ej: Edición de software"
+                        className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Error dentro del modal */}
+                {errorModal && (
+                  <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-3 flex items-start gap-2">
+                    <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-red-400" />
+                    <p className="text-sm text-red-300">{errorModal}</p>
+                  </div>
+                )}
+
+                {/* Aviso */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-xs text-blue-300 flex items-start gap-2">
+                    <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                    <span>Los campos marcados con <span className="text-red-400">*</span> son obligatorios. El logo se gestiona desde una pantalla separada.</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="flex gap-3 justify-end mt-6 pt-6 border-t border-gray-700">
+                <button
+                  onClick={() => setModalEditar(null)}
+                  disabled={guardando}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarEmpresa}
+                  disabled={guardando}
+                  className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {guardando ? (
+                    <>
+                      <span className="animate-spin"></span>
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} />
+                      Guardar Cambios
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+)}
 
       {/* MODAL ELIMINAR */}
       {modalEliminar && (
