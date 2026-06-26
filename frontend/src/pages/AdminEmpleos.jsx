@@ -16,7 +16,8 @@ import {
   Calendar,
   XCircle,
   PlayCircle,
-  Power
+  Power,
+  Edit2
 } from "lucide-react";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
@@ -29,7 +30,22 @@ function AdminEmpleos() {
   const [filtroModalidad, setFiltroModalidad] = useState("todos");
   const [modalDetalle, setModalDetalle] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
+  const [modalEditar, setModalEditar] = useState(null);
   const [mensaje, setMensaje] = useState(null);
+  const [datosEditar, setDatosEditar] = useState({
+    titulo: "",
+    empresa: "",
+    ubicacion: "",
+    modalidad: "",
+    jornada: "",
+    contrato: "",
+    salario: "",
+    descripcion: "",
+    requisitos: "",
+    beneficios: "",
+  });
+  const [guardando, setGuardando] = useState(false);
+  const [errorModal, setErrorModal] = useState(null);
 
   useEffect(() => {
     cargarEmpleos();
@@ -57,6 +73,73 @@ function AdminEmpleos() {
   const mostrarMensaje = (tipo, texto) => {
     setMensaje({ tipo, texto });
     setTimeout(() => setMensaje(null), 4000);
+  };
+
+    // Abrir modal de edición
+  const abrirEdicion = (empleo) => {
+    setDatosEditar({
+      titulo: empleo.titulo || "",
+      empresa: empleo.empresa || "",
+      ubicacion: empleo.ubicacion || "",
+      modalidad: empleo.modalidad || "",
+      jornada: empleo.jornada || "",
+      contrato: empleo.contrato || "",
+      salario: empleo.salario || "",
+      descripcion: empleo.descripcion || "",
+      requisitos: empleo.requisitos || "",
+      beneficios: empleo.beneficios || "",
+    });
+    setErrorModal(null);
+    setModalEditar(empleo);
+  };
+
+  // Guardar cambios del empleo
+  const guardarEmpleo = async () => {
+    setErrorModal(null);
+
+    // Validaciones
+    if (!datosEditar.titulo || datosEditar.titulo.trim().length < 3) {
+      setErrorModal("El título debe tener al menos 3 caracteres");
+      return;
+    }
+
+    if (!datosEditar.empresa || datosEditar.empresa.trim().length < 2) {
+      setErrorModal("La empresa es obligatoria");
+      return;
+    }
+
+    if (!datosEditar.descripcion || datosEditar.descripcion.trim().length < 10) {
+      setErrorModal("La descripción debe tener al menos 10 caracteres");
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      const token = localStorage.getItem("token");
+      
+      const res = await fetch(`${API_URL}/empleos/${modalEditar.id}`, {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(datosEditar),
+      });
+      
+      if (res.ok) {
+        mostrarMensaje("exito", "Empleo actualizado correctamente");
+        setModalEditar(null);
+        cargarEmpleos();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setErrorModal(errorData.message || "Error al actualizar empleo");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setErrorModal("Error de conexión con el servidor");
+    } finally {
+      setGuardando(false);
+    }
   };
 
   // Cerrar empleo
@@ -349,16 +432,25 @@ function AdminEmpleos() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setModalDetalle(empleo)}
-                          className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
-                          title="Ver detalles"
-                        >
-                          <Eye size={18} />
-                        </button>
-                        
-                        {empleo.estado === "ACTIVA" ? (
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setModalDetalle(empleo)}
+                        className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
+                        title="Ver detalles"
+                      >
+                        <Eye size={18} />
+                      </button>
+
+                      {/* NUEVO: Botón Editar */}
+                      <button
+                        onClick={() => abrirEdicion(empleo)}
+                        className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
+                        title="Editar empleo"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      
+                      {empleo.estado === "ACTIVA" ? (
                           <button
                             onClick={() => cerrarEmpleo(empleo)}
                             className="p-2 hover:bg-orange-500/20 rounded-lg text-orange-400 transition-colors"
@@ -525,6 +617,231 @@ function AdminEmpleos() {
           </div>
         </div>
       )}
+
+      {/* MODAL DE EDICIÓN */}
+        {modalEditar && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-yellow-500/30 rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="bg-yellow-500/20 p-3 rounded-lg">
+                    <Edit2 size={24} className="text-yellow-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Editar Empleo</h3>
+                    <p className="text-xs text-gray-400">ID: #{modalEditar.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setModalEditar(null)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Formulario */}
+              <div className="space-y-4">
+                {/* Título */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Título del empleo <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={datosEditar.titulo}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, titulo: e.target.value })}
+                    placeholder="Ej: Desarrollador Full Stack"
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                  />
+                </div>
+
+                {/* Empresa y Ubicación (grid 2 columnas) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Empresa <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={datosEditar.empresa}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, empresa: e.target.value })}
+                      placeholder="Nombre de la empresa"
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Ubicación
+                    </label>
+                    <input
+                      type="text"
+                      value={datosEditar.ubicacion}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, ubicacion: e.target.value })}
+                      placeholder="Ej: Ciudad de México"
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                    />
+                  </div>
+                </div>
+
+                {/* Modalidad, Jornada, Contrato (grid 3 columnas) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Modalidad
+                    </label>
+                    <select
+                      value={datosEditar.modalidad}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, modalidad: e.target.value })}
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Presencial">Presencial</option>
+                      <option value="Remoto">Remoto</option>
+                      <option value="Híbrido">Híbrido</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Jornada
+                    </label>
+                    <select
+                      value={datosEditar.jornada}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, jornada: e.target.value })}
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Tiempo completo">Tiempo completo</option>
+                      <option value="Medio tiempo">Medio tiempo</option>
+                      <option value="Por horas">Por horas</option>
+                      <option value="Freelance">Freelance</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Contrato
+                    </label>
+                    <select
+                      value={datosEditar.contrato}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, contrato: e.target.value })}
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Indefinido">Indefinido</option>
+                      <option value="Temporal">Temporal</option>
+                      <option value="Por obra o labor">Por obra o labor</option>
+                      <option value="Por comisión">Por comisión</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Salario */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Salario
+                  </label>
+                  <input
+                    type="text"
+                    value={datosEditar.salario}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, salario: e.target.value })}
+                    placeholder="Ej: $15,000 (Mensual) o Por acordar"
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                  />
+                </div>
+
+                {/* Descripción */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Descripción <span className="text-red-400">*</span>
+                  </label>
+                  <textarea
+                    value={datosEditar.descripcion}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, descripcion: e.target.value })}
+                    placeholder="Describe las responsabilidades y el rol..."
+                    rows={4}
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                  />
+                </div>
+
+                {/* Requisitos */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Requisitos
+                  </label>
+                  <textarea
+                    value={datosEditar.requisitos}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, requisitos: e.target.value })}
+                    placeholder="Lista los requisitos del puesto..."
+                    rows={3}
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                  />
+                </div>
+
+                {/* Beneficios */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Beneficios
+                  </label>
+                  <textarea
+                    value={datosEditar.beneficios}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, beneficios: e.target.value })}
+                    placeholder="Lista los beneficios que ofreces..."
+                    rows={3}
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                  />
+                </div>
+
+                {/* Error dentro del modal */}
+                {errorModal && (
+                  <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-3 flex items-start gap-2">
+                    <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-red-400" />
+                    <p className="text-sm text-red-300">{errorModal}</p>
+                  </div>
+                )}
+
+                {/* Aviso */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-xs text-blue-300 flex items-start gap-2">
+                    <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                    <span>Los campos marcados con <span className="text-red-400">*</span> son obligatorios. Para cambiar el estado, usa los botones de Cerrar/Reabrir.</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="flex gap-3 justify-end mt-6">
+                <button
+                  onClick={() => setModalEditar(null)}
+                  disabled={guardando}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarEmpleo}
+                  disabled={guardando}
+                  className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {guardando ? (
+                    <>
+                      <span className="animate-spin"></span>
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} />
+                      Guardar Cambios
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* MODAL ELIMINAR */}
       {modalEliminar && (

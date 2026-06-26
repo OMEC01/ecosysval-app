@@ -23,7 +23,7 @@ export class CreateEmpleoDto {
 
   @IsOptional()
   @IsString()
-  tipo_contrato?: string;
+  contrato?: string;
 
   @IsOptional()
   @IsString()

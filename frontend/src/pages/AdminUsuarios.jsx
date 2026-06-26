@@ -23,6 +23,9 @@ function AdminUsuarios() {
   const [modalEditar, setModalEditar] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
   const [mensaje, setMensaje] = useState(null);
+  const [datosEditar, setDatosEditar] = useState({ name: "", email: "", role: "" });
+  const [guardando, setGuardando] = useState(false);
+  const [errorModal, setErrorModal] = useState(null);
 
   // Cargar usuarios al iniciar
   useEffect(() => {
@@ -58,6 +61,70 @@ function AdminUsuarios() {
     setMensaje({ tipo, texto });
     setTimeout(() => setMensaje(null), 4000);
   };
+
+  // Abrir modal de edición
+const abrirEdicion = (usuario) => {
+  setDatosEditar({
+    name: usuario.name || "",
+    email: usuario.email || "",
+    role: usuario.role || "user",
+  });
+  setErrorModal(null);
+  setModalEditar(usuario);
+};
+
+const guardarUsuario = async () => {
+  // Limpiar error previo
+  setErrorModal(null);
+
+  // Validaciones básicas (ahora dentro del modal)
+  if (!datosEditar.name || datosEditar.name.trim().length < 3) {
+    setErrorModal("El nombre debe tener al menos 3 caracteres");
+    return;
+  }
+  
+  if (!datosEditar.email || !datosEditar.email.includes("@")) {
+    setErrorModal("Email inválido");
+    return;
+  }
+
+  // Validación adicional de email con regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(datosEditar.email)) {
+    setErrorModal("El formato del email no es válido (ej: nombre@dominio.com)");
+    return;
+  }
+
+  try {
+    setGuardando(true);
+    const token = localStorage.getItem("token");
+    
+    const res = await fetch(`${API_URL}/users/${modalEditar.id}`, {
+      method: "PUT",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}` 
+      },
+      body: JSON.stringify(datosEditar),
+    });
+    
+    if (res.ok) {
+      // Éxito: cerrar modal y mostrar mensaje en la página
+      mostrarMensaje("exito", "Usuario actualizado correctamente");
+      setModalEditar(null);
+      cargarUsuarios();
+    } else {
+      // Error del servidor: mostrar dentro del modal
+      const errorData = await res.json().catch(() => ({}));
+      setErrorModal(errorData.message || "Error al actualizar usuario");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    setErrorModal("Error de conexión con el servidor");
+  } finally {
+    setGuardando(false);
+  }
+};
 
   // Cambiar rol del usuario
   const cambiarRol = async (usuario) => {
@@ -255,6 +322,15 @@ function AdminUsuarios() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
+                        {/* Editar */}
+                        <button
+                          onClick={() => abrirEdicion(usuario)}
+                          className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
+                          title="Editar usuario"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+
                         {/* Cambiar rol */}
                         <button
                           onClick={() => cambiarRol(usuario)}
@@ -281,6 +357,119 @@ function AdminUsuarios() {
           </div>
         )}
       </div>
+
+      {/* MODAL DE EDICIÓN */}
+      {modalEditar && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-yellow-500/30 rounded-xl p-6 max-w-md w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-yellow-500/20 p-3 rounded-lg">
+                  <Edit2 size={24} className="text-yellow-400" />
+                </div>
+                <h3 className="text-xl font-bold">Editar Usuario</h3>
+              </div>
+              <button
+                onClick={() => setModalEditar(null)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Formulario */}
+            <div className="space-y-4">
+              {/* Nombre */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                  Nombre completo
+                </label>
+                <input
+                  type="text"
+                  value={datosEditar.name}
+                  onChange={(e) => setDatosEditar({ ...datosEditar, name: e.target.value })}
+                  placeholder="Nombre del usuario"
+                  className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                  Correo electrónico
+                </label>
+                <input
+                  type="email"
+                  value={datosEditar.email}
+                  onChange={(e) => setDatosEditar({ ...datosEditar, email: e.target.value })}
+                  placeholder="correo@ejemplo.com"
+                  className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                />
+              </div>
+
+              {/* Rol */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                  Rol del usuario
+                </label>
+                <select
+                  value={datosEditar.role}
+                  onChange={(e) => setDatosEditar({ ...datosEditar, role: e.target.value })}
+                  className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                >
+                  <option value="user">Usuario normal</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+
+              {/* Error dentro del modal */}
+                {errorModal && (
+                  <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-3 flex items-start gap-2">
+                    <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-red-400" />
+                    <p className="text-sm text-red-300">{errorModal}</p>
+                  </div>
+                )}
+
+              {/* Aviso */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-xs text-blue-300 flex items-start gap-2">
+                  <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>Para cambiar la contraseña, el usuario debe hacerlo desde su perfil.</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Botones */}
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setModalEditar(null)}
+                disabled={guardando}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={guardarUsuario}
+                disabled={guardando}
+                className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {guardando ? (
+                  <>
+                    <span className="animate-spin"></span>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} />
+                    Guardar Cambios
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
       {modalEliminar && (
