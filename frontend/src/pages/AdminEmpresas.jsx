@@ -230,7 +230,7 @@ function AdminEmpresas() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8 pt-20 lg:pt-8">
       {/* HEADER */}
       <div className="mb-8 flex items-center justify-between">
         <div>
@@ -285,7 +285,7 @@ function AdminEmpresas() {
         </div>
       </div>
 
-      {/* TABLA */}
+      {/* TABLA / TARJETAS */}
       <div className="bg-black/30 border border-yellow-500/20 rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-400">
@@ -300,95 +300,178 @@ function AdminEmpresas() {
             }
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-black/40 border-b border-yellow-500/20">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Empresa</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Ubicación</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Empleados</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Antigüedad</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {empresasFiltradas.map((empresa) => (
-                  <tr 
-                    key={empresa.id} 
-                    className="border-b border-gray-800 hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-gray-300">#{empresa.id}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center text-yellow-400 font-bold text-lg flex-shrink-0">
-                          {empresa.logo ? (
-                            <img 
-                              src={`${API_URL}${empresa.logo}`}
-                              alt={empresa.razonSocial}
-                              className="w-full h-full object-cover rounded-lg"
-                            />
-                          ) : (
-                            empresa.razonSocial?.charAt(0).toUpperCase() || "?"
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold">{empresa.razonSocial}</p>
-                          <p className="text-xs text-gray-400">{empresa.correo}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <MapPin size={16} className="text-gray-500" />
-                        {empresa.ubicacion}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <Users size={16} className="text-gray-500" />
-                        {empresa.empleados}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">
-                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-semibold">
-                        <Award size={14} />
-                        {empresa.antiguedad} años
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setModalDetalle(empresa)}
-                          className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
-                          title="Ver detalles"
-                        >
-                          <Eye size={18} />
-                        </button>
-
-                        {/* NUEVO: Botón Editar */}
-                        <button
-                          onClick={() => abrirEdicion(empresa)}
-                          className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
-                          title="Editar empresa"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        
-                        <button
-                          onClick={() => setModalEliminar(empresa)}
-                          className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* VISTA DESKTOP (tabla) - oculta en móvil */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-black/40 border-b border-yellow-500/20">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Empresa</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Ubicación</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Empleados</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Antigüedad</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {empresasFiltradas.map((empresa) => (
+                    <tr 
+                      key={empresa.id} 
+                      className="border-b border-gray-800 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-gray-300">#{empresa.id}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center text-yellow-400 font-bold text-lg flex-shrink-0">
+                            {empresa.logo ? (
+                              <img 
+                                src={`${API_URL}${empresa.logo}`}
+                                alt={empresa.razonSocial}
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              empresa.razonSocial?.charAt(0).toUpperCase() || "?"
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold">{empresa.razonSocial}</p>
+                            <p className="text-xs text-gray-400">{empresa.correo}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <MapPin size={16} className="text-gray-500" />
+                          {empresa.ubicacion}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <Users size={16} className="text-gray-500" />
+                          {empresa.empleados}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-semibold">
+                          <Award size={14} />
+                          {empresa.antiguedad} años
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setModalDetalle(empresa)}
+                            className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
+                            title="Ver detalles"
+                          >
+                            <Eye size={18} />
+                          </button>
+
+                          <button
+                            onClick={() => abrirEdicion(empresa)}
+                            className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
+                            title="Editar empresa"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          
+                          <button
+                            onClick={() => setModalEliminar(empresa)}
+                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* VISTA MÓVIL (tarjetas) - oculta en desktop */}
+            <div className="lg:hidden divide-y divide-gray-800">
+              {empresasFiltradas.map((empresa) => (
+                <div 
+                  key={empresa.id}
+                  className="p-4 hover:bg-white/5 transition-colors"
+                >
+                  {/* Header de la tarjeta */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center text-yellow-400 font-bold text-xl flex-shrink-0">
+                      {empresa.logo ? (
+                        <img 
+                          src={`${API_URL}${empresa.logo}`}
+                          alt={empresa.razonSocial}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        empresa.razonSocial?.charAt(0).toUpperCase() || "?"
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{empresa.razonSocial}</p>
+                      <p className="text-xs text-gray-400 truncate">{empresa.correo}</p>
+                    </div>
+                    <span className="text-xs text-gray-500 flex-shrink-0">#{empresa.id}</span>
+                  </div>
+
+                  {/* Info de la empresa */}
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                    <div className="bg-black/30 p-2 rounded-lg">
+                      <p className="text-gray-500 mb-1 flex items-center gap-1">
+                        <MapPin size={12} /> Ubicación
+                      </p>
+                      <p className="text-gray-300 truncate">{empresa.ubicacion || "—"}</p>
+                    </div>
+                    <div className="bg-black/30 p-2 rounded-lg">
+                      <p className="text-gray-500 mb-1 flex items-center gap-1">
+                        <Users size={12} /> Empleados
+                      </p>
+                      <p className="text-gray-300">{empresa.empleados}</p>
+                    </div>
+                  </div>
+
+                  {/* Badge de antigüedad */}
+                  <div className="mb-3">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-semibold">
+                      <Award size={14} />
+                      {empresa.antiguedad} años de antigüedad
+                    </span>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setModalDetalle(empresa)}
+                      className="flex-1 flex items-center justify-center gap-2 p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors text-sm font-semibold"
+                    >
+                      <Eye size={16} />
+                      Ver
+                    </button>
+
+                    <button
+                      onClick={() => abrirEdicion(empresa)}
+                      className="flex-1 flex items-center justify-center gap-2 p-2 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors text-sm font-semibold"
+                    >
+                      <Edit2 size={16} />
+                      Editar
+                    </button>
+                    
+                    <button
+                      onClick={() => setModalEliminar(empresa)}
+                      className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

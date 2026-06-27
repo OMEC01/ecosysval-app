@@ -285,7 +285,7 @@ function AdminEmpleos() {
     };
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8 pt-20 lg:pt-8">
       {/* HEADER */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
@@ -350,7 +350,7 @@ function AdminEmpleos() {
         </div>
       </div>
 
-      {/* TABLA */}
+      {/* TABLA / TARJETAS */}
       <div className="bg-black/30 border border-yellow-500/20 rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-400">
@@ -365,123 +365,239 @@ function AdminEmpleos() {
             }
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-black/40 border-b border-yellow-500/20">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Empleo</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Modalidad</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Salario</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Estado</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Publicado</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {empleosFiltrados.map((empleo) => (
-                  <tr 
-                    key={empleo.id} 
-                    className="border-b border-gray-800 hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-gray-300">#{empleo.id}</td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-semibold">{empleo.titulo}</p>
-                        <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                          <Building2 size={12} />
-                          {empleo.empresa}
-                          {empleo.ubicacion && (
-                            <>
-                              <span className="mx-1">·</span>
-                              <MapPin size={12} />
-                              {empleo.ubicacion}
-                            </>
+          <>
+            {/* VISTA DESKTOP (tabla) - oculta en móvil */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-black/40 border-b border-yellow-500/20">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Empleo</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Modalidad</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Salario</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Estado</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Publicado</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {empleosFiltrados.map((empleo) => (
+                    <tr 
+                      key={empleo.id} 
+                      className="border-b border-gray-800 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-gray-300">#{empleo.id}</td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-semibold">{empleo.titulo}</p>
+                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                            <Building2 size={12} />
+                            {empleo.empresa}
+                            {empleo.ubicacion && (
+                              <>
+                                <span className="mx-1">·</span>
+                                <MapPin size={12} />
+                                {empleo.ubicacion}
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full font-semibold">
+                          {empleo.modalidad || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-300 text-sm">
+                        <div className="flex items-center gap-1">
+                          <DollarSign size={14} className="text-green-400" />
+                          {empleo.salario || "Por acordar"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {empleo.estado === "ACTIVA" ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">
+                            <PlayCircle size={14} />
+                            Activa
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">
+                            <XCircle size={14} />
+                            Cerrada
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-gray-300 text-sm">
+                        <div className="flex items-center gap-1">
+                          <Clock size={14} className="text-gray-500" />
+                          {diasDesde(empleo.createdAt)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setModalDetalle(empleo)}
+                            className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
+                            title="Ver detalles"
+                          >
+                            <Eye size={18} />
+                          </button>
+
+                          <button
+                            onClick={() => abrirEdicion(empleo)}
+                            className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
+                            title="Editar empleo"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          
+                          {empleo.estado === "ACTIVA" ? (
+                            <button
+                              onClick={() => cerrarEmpleo(empleo)}
+                              className="p-2 hover:bg-orange-500/20 rounded-lg text-orange-400 transition-colors"
+                              title="Cerrar empleo"
+                            >
+                              <Power size={18} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => reabrirEmpleo(empleo)}
+                              className="p-2 hover:bg-green-500/20 rounded-lg text-green-400 transition-colors"
+                              title="Reabrir empleo"
+                            >
+                              <PlayCircle size={18} />
+                            </button>
                           )}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full font-semibold">
-                        {empleo.modalidad || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300 text-sm">
-                      <div className="flex items-center gap-1">
-                        <DollarSign size={14} className="text-green-400" />
-                        {empleo.salario || "Por acordar"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
+                          
+                          <button
+                            onClick={() => setModalEliminar(empleo)}
+                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* VISTA MÓVIL (tarjetas) - oculta en desktop */}
+            <div className="lg:hidden divide-y divide-gray-800">
+              {empleosFiltrados.map((empleo) => (
+                <div 
+                  key={empleo.id}
+                  className="p-4 hover:bg-white/5 transition-colors"
+                >
+                  {/* Header con estado */}
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold mb-1">{empleo.titulo}</p>
+                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                        <Building2 size={12} />
+                        <span className="truncate">{empleo.empresa}</span>
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                      <span className="text-xs text-gray-500">#{empleo.id}</span>
                       {empleo.estado === "ACTIVA" ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">
-                          <PlayCircle size={14} />
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">
+                          <PlayCircle size={12} />
                           Activa
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">
-                          <XCircle size={14} />
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">
+                          <XCircle size={12} />
                           Cerrada
                         </span>
                       )}
-                    </td>
-                    <td className="px-6 py-4 text-gray-300 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Clock size={14} className="text-gray-500" />
-                          {diasDesde(empleo.createdAt)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => setModalDetalle(empleo)}
-                        className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
-                        title="Ver detalles"
-                      >
-                        <Eye size={18} />
-                      </button>
+                    </div>
+                  </div>
 
-                      {/* NUEVO: Botón Editar */}
-                      <button
-                        onClick={() => abrirEdicion(empleo)}
-                        className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
-                        title="Editar empleo"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      
-                      {empleo.estado === "ACTIVA" ? (
-                          <button
-                            onClick={() => cerrarEmpleo(empleo)}
-                            className="p-2 hover:bg-orange-500/20 rounded-lg text-orange-400 transition-colors"
-                            title="Cerrar empleo"
-                          >
-                            <Power size={18} />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => reabrirEmpleo(empleo)}
-                            className="p-2 hover:bg-green-500/20 rounded-lg text-green-400 transition-colors"
-                            title="Reabrir empleo"
-                          >
-                            <PlayCircle size={18} />
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={() => setModalEliminar(empleo)}
-                          className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                  {/* Info */}
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                    {empleo.ubicacion && (
+                      <div className="bg-black/30 p-2 rounded-lg">
+                        <p className="text-gray-500 mb-1 flex items-center gap-1">
+                          <MapPin size={12} /> Ubicación
+                        </p>
+                        <p className="text-gray-300 truncate">{empleo.ubicacion}</p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                    {empleo.modalidad && (
+                      <div className="bg-black/30 p-2 rounded-lg">
+                        <p className="text-gray-500 mb-1">Modalidad</p>
+                        <p className="text-blue-300 font-semibold">{empleo.modalidad}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Salario destacado */}
+                  {empleo.salario && (
+                    <div className="bg-green-500/10 border border-green-500/30 p-2 rounded-lg mb-3">
+                      <p className="text-xs text-green-300 flex items-center gap-1">
+                        <DollarSign size={14} />
+                        <span className="font-semibold">{empleo.salario}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Tiempo */}
+                  <p className="text-xs text-gray-500 flex items-center gap-1 mb-3">
+                    <Clock size={12} />
+                    {diasDesde(empleo.createdAt)}
+                  </p>
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setModalDetalle(empleo)}
+                      className="flex-1 flex items-center justify-center gap-1 p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors text-xs font-semibold"
+                    >
+                      <Eye size={14} />
+                      Ver
+                    </button>
+
+                    <button
+                      onClick={() => abrirEdicion(empleo)}
+                      className="flex-1 flex items-center justify-center gap-1 p-2 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors text-xs font-semibold"
+                    >
+                      <Edit2 size={14} />
+                      Editar
+                    </button>
+                    
+                    {empleo.estado === "ACTIVA" ? (
+                      <button
+                        onClick={() => cerrarEmpleo(empleo)}
+                        className="p-2 bg-orange-500/10 hover:bg-orange-500/20 rounded-lg text-orange-400 transition-colors"
+                        title="Cerrar"
+                      >
+                        <Power size={16} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => reabrirEmpleo(empleo)}
+                        className="p-2 bg-green-500/10 hover:bg-green-500/20 rounded-lg text-green-400 transition-colors"
+                        title="Reabrir"
+                      >
+                        <PlayCircle size={16} />
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => setModalEliminar(empleo)}
+                      className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

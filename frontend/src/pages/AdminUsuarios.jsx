@@ -200,7 +200,7 @@ const guardarUsuario = async () => {
     });
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8 pt-20 lg:pt-8">
       {/* HEADER */}
       <div className="mb-8 flex items-center justify-between">
         <div>
@@ -268,7 +268,7 @@ const guardarUsuario = async () => {
         </div>
       </div>
 
-      {/* TABLA DE USUARIOS */}
+      {/* TABLA / TARJETAS */}
       <div className="bg-black/30 border border-yellow-500/20 rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-400">
@@ -280,81 +280,147 @@ const guardarUsuario = async () => {
             No se encontraron usuarios
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-black/40 border-b border-yellow-500/20">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Nombre</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Email</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Rol</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usuariosFiltrados.map((usuario) => (
-                  <tr 
-                    key={usuario.id} 
-                    className="border-b border-gray-800 hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-gray-300">#{usuario.id}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold">
-                          {usuario.name?.charAt(0).toUpperCase() || "?"}
-                        </div>
-                        <span className="font-medium">{usuario.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">{usuario.email}</td>
-                    <td className="px-6 py-4">
-                      {usuario.role === "admin" ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">
-                          <Shield size={14} />
-                          Admin
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-500/20 text-gray-300 rounded-full text-xs font-semibold">
-                          <UserPlus size={14} />
-                          Usuario
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Editar */}
-                        <button
-                          onClick={() => abrirEdicion(usuario)}
-                          className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
-                          title="Editar usuario"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-
-                        {/* Cambiar rol */}
-                        <button
-                          onClick={() => cambiarRol(usuario)}
-                          className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
-                          title={usuario.role === "admin" ? "Quitar admin" : "Hacer admin"}
-                        >
-                          {usuario.role === "admin" ? <ShieldOff size={18} /> : <Shield size={18} />}
-                        </button>
-                        
-                        {/* Eliminar */}
-                        <button
-                          onClick={() => setModalEliminar(usuario)}
-                          className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
-                          title="Eliminar usuario"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* VISTA DESKTOP (tabla) - oculta en móvil */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-black/40 border-b border-yellow-500/20">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Nombre</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Email</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Rol</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {usuariosFiltrados.map((usuario) => (
+                    <tr 
+                      key={usuario.id} 
+                      className="border-b border-gray-800 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-gray-300">#{usuario.id}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold">
+                            {usuario.name?.charAt(0).toUpperCase() || "?"}
+                          </div>
+                          <span className="font-medium">{usuario.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">{usuario.email}</td>
+                      <td className="px-6 py-4">
+                        {usuario.role === "admin" ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">
+                            <Shield size={14} />
+                            Admin
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-500/20 text-gray-300 rounded-full text-xs font-semibold">
+                            <UserPlus size={14} />
+                            Usuario
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => abrirEdicion(usuario)}
+                            className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
+                            title="Editar usuario"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+
+                          <button
+                            onClick={() => cambiarRol(usuario)}
+                            className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
+                            title={usuario.role === "admin" ? "Quitar admin" : "Hacer admin"}
+                          >
+                            {usuario.role === "admin" ? <ShieldOff size={18} /> : <Shield size={18} />}
+                          </button>
+                          
+                          <button
+                            onClick={() => setModalEliminar(usuario)}
+                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                            title="Eliminar usuario"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* VISTA MÓVIL (tarjetas) - oculta en desktop */}
+            <div className="lg:hidden divide-y divide-gray-800">
+              {usuariosFiltrados.map((usuario) => (
+                <div 
+                  key={usuario.id}
+                  className="p-4 hover:bg-white/5 transition-colors"
+                >
+                  {/* Header de la tarjeta */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold text-lg flex-shrink-0">
+                        {usuario.name?.charAt(0).toUpperCase() || "?"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold truncate">{usuario.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{usuario.email}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500 flex-shrink-0 ml-2">#{usuario.id}</span>
+                  </div>
+
+                  {/* Rol */}
+                  <div className="mb-3">
+                    {usuario.role === "admin" ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">
+                        <Shield size={14} />
+                        Admin
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-500/20 text-gray-300 rounded-full text-xs font-semibold">
+                        <UserPlus size={14} />
+                        Usuario
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => abrirEdicion(usuario)}
+                      className="flex-1 flex items-center justify-center gap-2 p-2 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors text-sm font-semibold"
+                    >
+                      <Edit2 size={16} />
+                      Editar
+                    </button>
+
+                    <button
+                      onClick={() => cambiarRol(usuario)}
+                      className="p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
+                      title={usuario.role === "admin" ? "Quitar admin" : "Hacer admin"}
+                    >
+                      {usuario.role === "admin" ? <ShieldOff size={18} /> : <Shield size={18} />}
+                    </button>
+                    
+                    <button
+                      onClick={() => setModalEliminar(usuario)}
+                      className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
