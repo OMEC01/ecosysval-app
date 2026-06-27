@@ -10,7 +10,7 @@ import {
   LogOut
 } from "lucide-react";
 
-function AdminSidebar({ onLogout, user }) {
+function AdminSidebar({ onLogout, user, onNavigate }) {
   const location = useLocation();
 
   // Lista de items del menú
@@ -76,19 +76,20 @@ function AdminSidebar({ onLogout, user }) {
           const active = isActive(item.path);
           
           return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                active
-                  ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                  : "text-gray-300 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <Icon size={20} />
-              <span className="font-medium">{item.label}</span>
-            </Link>
-          );
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={onNavigate}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  active
+                    ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                    : "text-gray-300 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <Icon size={20} />
+                <span className="font-medium">{item.label}</span>
+              </Link>
+            );
         })}
       </nav>
 

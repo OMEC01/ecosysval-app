@@ -143,7 +143,7 @@ function Admin() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8 pt-20 lg:pt-8">
       {/* HEADER */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
