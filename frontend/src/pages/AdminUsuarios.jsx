@@ -23,6 +23,9 @@ function AdminUsuarios() {
   const [modalEditar, setModalEditar] = useState(null);
   const [modalEliminar, setModalEliminar] = useState(null);
   const [mensaje, setMensaje] = useState(null);
+  const [datosEditar, setDatosEditar] = useState({ name: "", email: "", role: "" });
+  const [guardando, setGuardando] = useState(false);
+  const [errorModal, setErrorModal] = useState(null);
 
   // Cargar usuarios al iniciar
   useEffect(() => {
@@ -58,6 +61,70 @@ function AdminUsuarios() {
     setMensaje({ tipo, texto });
     setTimeout(() => setMensaje(null), 4000);
   };
+
+  // Abrir modal de edición
+const abrirEdicion = (usuario) => {
+  setDatosEditar({
+    name: usuario.name || "",
+    email: usuario.email || "",
+    role: usuario.role || "user",
+  });
+  setErrorModal(null);
+  setModalEditar(usuario);
+};
+
+const guardarUsuario = async () => {
+  // Limpiar error previo
+  setErrorModal(null);
+
+  // Validaciones básicas (ahora dentro del modal)
+  if (!datosEditar.name || datosEditar.name.trim().length < 3) {
+    setErrorModal("El nombre debe tener al menos 3 caracteres");
+    return;
+  }
+  
+  if (!datosEditar.email || !datosEditar.email.includes("@")) {
+    setErrorModal("Email inválido");
+    return;
+  }
+
+  // Validación adicional de email con regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(datosEditar.email)) {
+    setErrorModal("El formato del email no es válido (ej: nombre@dominio.com)");
+    return;
+  }
+
+  try {
+    setGuardando(true);
+    const token = localStorage.getItem("token");
+    
+    const res = await fetch(`${API_URL}/users/${modalEditar.id}`, {
+      method: "PUT",
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}` 
+      },
+      body: JSON.stringify(datosEditar),
+    });
+    
+    if (res.ok) {
+      // Éxito: cerrar modal y mostrar mensaje en la página
+      mostrarMensaje("exito", "Usuario actualizado correctamente");
+      setModalEditar(null);
+      cargarUsuarios();
+    } else {
+      // Error del servidor: mostrar dentro del modal
+      const errorData = await res.json().catch(() => ({}));
+      setErrorModal(errorData.message || "Error al actualizar usuario");
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    setErrorModal("Error de conexión con el servidor");
+  } finally {
+    setGuardando(false);
+  }
+};
 
   // Cambiar rol del usuario
   const cambiarRol = async (usuario) => {
@@ -133,7 +200,7 @@ function AdminUsuarios() {
     });
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8 pt-20 lg:pt-8">
       {/* HEADER */}
       <div className="mb-8 flex items-center justify-between">
         <div>
@@ -201,7 +268,7 @@ function AdminUsuarios() {
         </div>
       </div>
 
-      {/* TABLA DE USUARIOS */}
+      {/* TABLA / TARJETAS */}
       <div className="bg-black/30 border border-yellow-500/20 rounded-xl overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-400">
@@ -213,74 +280,262 @@ function AdminUsuarios() {
             No se encontraron usuarios
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-black/40 border-b border-yellow-500/20">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Nombre</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Email</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Rol</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usuariosFiltrados.map((usuario) => (
-                  <tr 
-                    key={usuario.id} 
-                    className="border-b border-gray-800 hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-gray-300">#{usuario.id}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold">
-                          {usuario.name?.charAt(0).toUpperCase() || "?"}
-                        </div>
-                        <span className="font-medium">{usuario.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-300">{usuario.email}</td>
-                    <td className="px-6 py-4">
-                      {usuario.role === "admin" ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">
-                          <Shield size={14} />
-                          Admin
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-500/20 text-gray-300 rounded-full text-xs font-semibold">
-                          <UserPlus size={14} />
-                          Usuario
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Cambiar rol */}
-                        <button
-                          onClick={() => cambiarRol(usuario)}
-                          className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
-                          title={usuario.role === "admin" ? "Quitar admin" : "Hacer admin"}
-                        >
-                          {usuario.role === "admin" ? <ShieldOff size={18} /> : <Shield size={18} />}
-                        </button>
-                        
-                        {/* Eliminar */}
-                        <button
-                          onClick={() => setModalEliminar(usuario)}
-                          className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
-                          title="Eliminar usuario"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* VISTA DESKTOP (tabla) - oculta en móvil */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-black/40 border-b border-yellow-500/20">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Nombre</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Email</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Rol</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {usuariosFiltrados.map((usuario) => (
+                    <tr 
+                      key={usuario.id} 
+                      className="border-b border-gray-800 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-gray-300">#{usuario.id}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold">
+                            {usuario.name?.charAt(0).toUpperCase() || "?"}
+                          </div>
+                          <span className="font-medium">{usuario.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">{usuario.email}</td>
+                      <td className="px-6 py-4">
+                        {usuario.role === "admin" ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">
+                            <Shield size={14} />
+                            Admin
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-500/20 text-gray-300 rounded-full text-xs font-semibold">
+                            <UserPlus size={14} />
+                            Usuario
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => abrirEdicion(usuario)}
+                            className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
+                            title="Editar usuario"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+
+                          <button
+                            onClick={() => cambiarRol(usuario)}
+                            className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
+                            title={usuario.role === "admin" ? "Quitar admin" : "Hacer admin"}
+                          >
+                            {usuario.role === "admin" ? <ShieldOff size={18} /> : <Shield size={18} />}
+                          </button>
+                          
+                          <button
+                            onClick={() => setModalEliminar(usuario)}
+                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                            title="Eliminar usuario"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* VISTA MÓVIL (tarjetas) - oculta en desktop */}
+            <div className="lg:hidden divide-y divide-gray-800">
+              {usuariosFiltrados.map((usuario) => (
+                <div 
+                  key={usuario.id}
+                  className="p-4 hover:bg-white/5 transition-colors"
+                >
+                  {/* Header de la tarjeta */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold text-lg flex-shrink-0">
+                        {usuario.name?.charAt(0).toUpperCase() || "?"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold truncate">{usuario.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{usuario.email}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500 flex-shrink-0 ml-2">#{usuario.id}</span>
+                  </div>
+
+                  {/* Rol */}
+                  <div className="mb-3">
+                    {usuario.role === "admin" ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold">
+                        <Shield size={14} />
+                        Admin
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-500/20 text-gray-300 rounded-full text-xs font-semibold">
+                        <UserPlus size={14} />
+                        Usuario
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => abrirEdicion(usuario)}
+                      className="flex-1 flex items-center justify-center gap-2 p-2 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors text-sm font-semibold"
+                    >
+                      <Edit2 size={16} />
+                      Editar
+                    </button>
+
+                    <button
+                      onClick={() => cambiarRol(usuario)}
+                      className="p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
+                      title={usuario.role === "admin" ? "Quitar admin" : "Hacer admin"}
+                    >
+                      {usuario.role === "admin" ? <ShieldOff size={18} /> : <Shield size={18} />}
+                    </button>
+                    
+                    <button
+                      onClick={() => setModalEliminar(usuario)}
+                      className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
+
+      {/* MODAL DE EDICIÓN */}
+      {modalEditar && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-yellow-500/30 rounded-xl p-6 max-w-md w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-yellow-500/20 p-3 rounded-lg">
+                  <Edit2 size={24} className="text-yellow-400" />
+                </div>
+                <h3 className="text-xl font-bold">Editar Usuario</h3>
+              </div>
+              <button
+                onClick={() => setModalEditar(null)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Formulario */}
+            <div className="space-y-4">
+              {/* Nombre */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                  Nombre completo
+                </label>
+                <input
+                  type="text"
+                  value={datosEditar.name}
+                  onChange={(e) => setDatosEditar({ ...datosEditar, name: e.target.value })}
+                  placeholder="Nombre del usuario"
+                  className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                  Correo electrónico
+                </label>
+                <input
+                  type="email"
+                  value={datosEditar.email}
+                  onChange={(e) => setDatosEditar({ ...datosEditar, email: e.target.value })}
+                  placeholder="correo@ejemplo.com"
+                  className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                />
+              </div>
+
+              {/* Rol */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-gray-300">
+                  Rol del usuario
+                </label>
+                <select
+                  value={datosEditar.role}
+                  onChange={(e) => setDatosEditar({ ...datosEditar, role: e.target.value })}
+                  className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                >
+                  <option value="user">Usuario normal</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+
+              {/* Error dentro del modal */}
+                {errorModal && (
+                  <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-3 flex items-start gap-2">
+                    <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-red-400" />
+                    <p className="text-sm text-red-300">{errorModal}</p>
+                  </div>
+                )}
+
+              {/* Aviso */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-xs text-blue-300 flex items-start gap-2">
+                  <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>Para cambiar la contraseña, el usuario debe hacerlo desde su perfil.</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Botones */}
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setModalEditar(null)}
+                disabled={guardando}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={guardarUsuario}
+                disabled={guardando}
+                className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {guardando ? (
+                  <>
+                    <span className="animate-spin"></span>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} />
+                    Guardar Cambios
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
       {modalEliminar && (

@@ -17,6 +17,7 @@ import Perfil from "./pages/Perfil";
 import AdminLayout from "./components/AdminLayout";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminEmpresas from "./pages/AdminEmpresas";
+import AdminEmpleos from "./pages/AdminEmpleos";
 import MapaPage from "./pages/MapaPage";
 import Cursos from "./pages/Cursos";
 import FormularioComercio from "./pages/FormularioComercio";
@@ -55,10 +56,11 @@ function AppContent() {
   const isLoggedIn = !!storedUser;
 
   const showNavbar =
-    !isLoggedIn &&
-    (location.pathname === "/login" ||
-      location.pathname === "/register" ||
-      location.pathname === "/subscribe");
+      !isLoggedIn &&
+      (location.pathname === "/" ||
+        location.pathname === "/login" ||
+        location.pathname === "/register" ||
+        location.pathname === "/subscribe");
 
   return (
     <>
@@ -66,7 +68,7 @@ function AppContent() {
 
       <div style={{ padding: "20px" }}>
         <Routes>
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<Subscribe />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/subscribe" element={<Subscribe />} />
@@ -113,6 +115,7 @@ function AppContent() {
           <Route index element={<Admin />} />
           <Route path="usuarios" element={<AdminUsuarios />} />
           <Route path="empresas" element={<AdminEmpresas />} />
+          <Route path="empleos" element={<AdminEmpleos />} />
           
         </Route>
         </Routes>

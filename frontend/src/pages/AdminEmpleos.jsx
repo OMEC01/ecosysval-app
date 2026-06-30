@@ -1,0 +1,1003 @@
+import React, { useEffect, useState } from "react";
+import { 
+  Briefcase, 
+  Search, 
+  Eye,
+  Trash2, 
+  X,
+  Check,
+  AlertCircle,
+  MapPin,
+  Building2,
+  DollarSign,
+  Clock,
+  FileText,
+  Award,
+  Calendar,
+  XCircle,
+  PlayCircle,
+  Power,
+  Edit2
+} from "lucide-react";
+
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+
+function AdminEmpleos() {
+  const [empleos, setEmpleos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [filtroModalidad, setFiltroModalidad] = useState("todos");
+  const [modalDetalle, setModalDetalle] = useState(null);
+  const [modalEliminar, setModalEliminar] = useState(null);
+  const [modalEditar, setModalEditar] = useState(null);
+  const [mensaje, setMensaje] = useState(null);
+  const [datosEditar, setDatosEditar] = useState({
+    titulo: "",
+    empresa: "",
+    ubicacion: "",
+    modalidad: "",
+    jornada: "",
+    contrato: "",
+    salario: "",
+    descripcion: "",
+    requisitos: "",
+    beneficios: "",
+  });
+  const [guardando, setGuardando] = useState(false);
+  const [errorModal, setErrorModal] = useState(null);
+
+  useEffect(() => {
+    cargarEmpleos();
+  }, []);
+
+  const cargarEmpleos = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/empleos`);
+      
+      if (res.ok) {
+        const data = await res.json();
+        setEmpleos(Array.isArray(data) ? data : []);
+      } else {
+        mostrarMensaje("error", "Error al cargar empleos");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      mostrarMensaje("error", "Error de conexión");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mostrarMensaje = (tipo, texto) => {
+    setMensaje({ tipo, texto });
+    setTimeout(() => setMensaje(null), 4000);
+  };
+
+    // Abrir modal de edición
+  const abrirEdicion = (empleo) => {
+    setDatosEditar({
+      titulo: empleo.titulo || "",
+      empresa: empleo.empresa || "",
+      ubicacion: empleo.ubicacion || "",
+      modalidad: empleo.modalidad || "",
+      jornada: empleo.jornada || "",
+      contrato: empleo.contrato || "",
+      salario: empleo.salario || "",
+      descripcion: empleo.descripcion || "",
+      requisitos: empleo.requisitos || "",
+      beneficios: empleo.beneficios || "",
+    });
+    setErrorModal(null);
+    setModalEditar(empleo);
+  };
+
+  // Guardar cambios del empleo
+  const guardarEmpleo = async () => {
+    setErrorModal(null);
+
+    // Validaciones
+    if (!datosEditar.titulo || datosEditar.titulo.trim().length < 3) {
+      setErrorModal("El título debe tener al menos 3 caracteres");
+      return;
+    }
+
+    if (!datosEditar.empresa || datosEditar.empresa.trim().length < 2) {
+      setErrorModal("La empresa es obligatoria");
+      return;
+    }
+
+    if (!datosEditar.descripcion || datosEditar.descripcion.trim().length < 10) {
+      setErrorModal("La descripción debe tener al menos 10 caracteres");
+      return;
+    }
+
+    try {
+      setGuardando(true);
+      const token = localStorage.getItem("token");
+      
+      const res = await fetch(`${API_URL}/empleos/${modalEditar.id}`, {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(datosEditar),
+      });
+      
+      if (res.ok) {
+        mostrarMensaje("exito", "Empleo actualizado correctamente");
+        setModalEditar(null);
+        cargarEmpleos();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        setErrorModal(errorData.message || "Error al actualizar empleo");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setErrorModal("Error de conexión con el servidor");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // Cerrar empleo
+  const cerrarEmpleo = async (empleo) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/empleos/${empleo.id}/cerrar`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (res.ok) {
+        mostrarMensaje("exito", "Empleo cerrado correctamente");
+        cargarEmpleos();
+      } else {
+        mostrarMensaje("error", "Error al cerrar el empleo");
+      }
+    } catch (error) {
+      mostrarMensaje("error", "Error de conexión");
+    }
+  };
+
+  // Reabrir empleo
+  const reabrirEmpleo = async (empleo) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/empleos/${empleo.id}/reabrir`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (res.ok) {
+        mostrarMensaje("exito", "Empleo reabierto correctamente");
+        cargarEmpleos();
+      } else {
+        mostrarMensaje("error", "Error al reabrir el empleo");
+      }
+    } catch (error) {
+      mostrarMensaje("error", "Error de conexión");
+    }
+  };
+
+  // Eliminar empleo
+  const eliminarEmpleo = async () => {
+    if (!modalEliminar) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/empleos/${modalEliminar.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (res.ok) {
+        mostrarMensaje("exito", "Empleo eliminado correctamente");
+        cargarEmpleos();
+      } else {
+        mostrarMensaje("error", "Error al eliminar empleo");
+      }
+    } catch (error) {
+      mostrarMensaje("error", "Error de conexión");
+    } finally {
+      setModalEliminar(null);
+    }
+  };
+
+  // Obtener modalidades únicas
+  const modalidades = [...new Set(empleos.map(e => e.modalidad).filter(Boolean))];
+
+  // Filtrar empleos
+  const empleosFiltrados = empleos.filter((e) => {
+    const coincideBusqueda = 
+      e.titulo?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      e.empresa?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      e.ubicacion?.toLowerCase().includes(busqueda.toLowerCase());
+    
+    const coincideEstado = filtroEstado === "todos" || e.estado === filtroEstado;
+    const coincideModalidad = filtroModalidad === "todos" || e.modalidad === filtroModalidad;
+    
+    return coincideBusqueda && coincideEstado && coincideModalidad;
+  });
+
+  // Estadísticas
+  const activos = empleos.filter(e => e.estado === "ACTIVA").length;
+  const cerrados = empleos.filter(e => e.estado === "CERRADA").length;
+
+  // Formatear fecha
+  const formatearFecha = (fecha) => {
+    if (!fecha) return "Sin fecha";
+    return new Date(fecha).toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+  };
+
+    // Calcular días desde publicación
+    const diasDesde = (fecha) => {
+    if (!fecha) return "Sin fecha";
+    
+    const ahora = new Date();
+    const publicado = new Date(fecha);
+    const diffMs = ahora - publicado;
+    
+    // Si la fecha está en el futuro o es muy reciente
+    if (diffMs < 0) return "Hoy";
+    
+    const diffMinutos = Math.floor(diffMs / (1000 * 60));
+    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    // Menos de 1 hora
+    if (diffMinutos < 60) {
+        if (diffMinutos < 1) return "Hace unos segundos";
+        return `Hace ${diffMinutos} min`;
+    }
+    
+    // Menos de 24 horas
+    if (diffHoras < 24) {
+        return `Hace ${diffHoras}h`;
+    }
+    
+    // Menos de 7 días
+    if (diffDias < 7) {
+        return `Hace ${diffDias} ${diffDias === 1 ? 'día' : 'días'}`;
+    }
+    
+    // Menos de 30 días
+    if (diffDias < 30) {
+        const semanas = Math.floor(diffDias / 7);
+        return `Hace ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}`;
+    }
+    
+    // Menos de 365 días
+    if (diffDias < 365) {
+        const meses = Math.floor(diffDias / 30);
+        return `Hace ${meses} ${meses === 1 ? 'mes' : 'meses'}`;
+    }
+    
+    // Más de un año
+    const años = Math.floor(diffDias / 365);
+    return `Hace ${años} ${años === 1 ? 'año' : 'años'}`;
+    };
+
+  return (
+    <div className="p-4 lg:p-8 pt-20 lg:pt-8">
+      {/* HEADER */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+          <Briefcase size={32} className="text-yellow-400" />
+          Gestión de Empleos
+        </h1>
+        <p className="text-gray-400">
+          Total: {empleos.length} ofertas · 
+          <span className="text-green-400 ml-1">{activos} activas</span> · 
+          <span className="text-red-400 ml-1">{cerrados} cerradas</span>
+        </p>
+      </div>
+
+      {/* MENSAJE */}
+      {mensaje && (
+        <div
+          className={`mb-4 p-4 rounded-lg flex items-center gap-3 ${
+            mensaje.tipo === "exito"
+              ? "bg-green-500/20 border border-green-500/40 text-green-300"
+              : "bg-red-500/20 border border-red-500/40 text-red-300"
+          }`}
+        >
+          {mensaje.tipo === "exito" ? <Check size={20} /> : <AlertCircle size={20} />}
+          <span>{mensaje.texto}</span>
+        </div>
+      )}
+
+      {/* FILTROS */}
+      <div className="bg-black/30 border border-yellow-500/20 rounded-xl p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por título, empresa o ubicación..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="w-full bg-black/50 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+            />
+          </div>
+
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+          >
+            <option value="todos">Todos los estados</option>
+            <option value="ACTIVA">Solo Activas</option>
+            <option value="CERRADA">Solo Cerradas</option>
+          </select>
+
+          <select
+            value={filtroModalidad}
+            onChange={(e) => setFiltroModalidad(e.target.value)}
+            className="bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+          >
+            <option value="todos">Todas las modalidades</option>
+            {modalidades.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* TABLA / TARJETAS */}
+      <div className="bg-black/30 border border-yellow-500/20 rounded-xl overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-gray-400">
+            Cargando empleos...
+          </div>
+        ) : empleosFiltrados.length === 0 ? (
+          <div className="p-12 text-center text-gray-400">
+            <Briefcase size={48} className="mx-auto mb-4 opacity-50" />
+            {empleos.length === 0 
+              ? "No hay empleos publicados aún"
+              : "No se encontraron empleos con esos filtros"
+            }
+          </div>
+        ) : (
+          <>
+            {/* VISTA DESKTOP (tabla) - oculta en móvil */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-black/40 border-b border-yellow-500/20">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">ID</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Empleo</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Modalidad</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Salario</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Estado</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-400">Publicado</th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-yellow-400">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {empleosFiltrados.map((empleo) => (
+                    <tr 
+                      key={empleo.id} 
+                      className="border-b border-gray-800 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-gray-300">#{empleo.id}</td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-semibold">{empleo.titulo}</p>
+                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                            <Building2 size={12} />
+                            {empleo.empresa}
+                            {empleo.ubicacion && (
+                              <>
+                                <span className="mx-1">·</span>
+                                <MapPin size={12} />
+                                {empleo.ubicacion}
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full font-semibold">
+                          {empleo.modalidad || "N/A"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-300 text-sm">
+                        <div className="flex items-center gap-1">
+                          <DollarSign size={14} className="text-green-400" />
+                          {empleo.salario || "Por acordar"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {empleo.estado === "ACTIVA" ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">
+                            <PlayCircle size={14} />
+                            Activa
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">
+                            <XCircle size={14} />
+                            Cerrada
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-gray-300 text-sm">
+                        <div className="flex items-center gap-1">
+                          <Clock size={14} className="text-gray-500" />
+                          {diasDesde(empleo.createdAt)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setModalDetalle(empleo)}
+                            className="p-2 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors"
+                            title="Ver detalles"
+                          >
+                            <Eye size={18} />
+                          </button>
+
+                          <button
+                            onClick={() => abrirEdicion(empleo)}
+                            className="p-2 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors"
+                            title="Editar empleo"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          
+                          {empleo.estado === "ACTIVA" ? (
+                            <button
+                              onClick={() => cerrarEmpleo(empleo)}
+                              className="p-2 hover:bg-orange-500/20 rounded-lg text-orange-400 transition-colors"
+                              title="Cerrar empleo"
+                            >
+                              <Power size={18} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => reabrirEmpleo(empleo)}
+                              className="p-2 hover:bg-green-500/20 rounded-lg text-green-400 transition-colors"
+                              title="Reabrir empleo"
+                            >
+                              <PlayCircle size={18} />
+                            </button>
+                          )}
+                          
+                          <button
+                            onClick={() => setModalEliminar(empleo)}
+                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* VISTA MÓVIL (tarjetas) - oculta en desktop */}
+            <div className="lg:hidden divide-y divide-gray-800">
+              {empleosFiltrados.map((empleo) => (
+                <div 
+                  key={empleo.id}
+                  className="p-4 hover:bg-white/5 transition-colors"
+                >
+                  {/* Header con estado */}
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold mb-1">{empleo.titulo}</p>
+                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                        <Building2 size={12} />
+                        <span className="truncate">{empleo.empresa}</span>
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                      <span className="text-xs text-gray-500">#{empleo.id}</span>
+                      {empleo.estado === "ACTIVA" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">
+                          <PlayCircle size={12} />
+                          Activa
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">
+                          <XCircle size={12} />
+                          Cerrada
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                    {empleo.ubicacion && (
+                      <div className="bg-black/30 p-2 rounded-lg">
+                        <p className="text-gray-500 mb-1 flex items-center gap-1">
+                          <MapPin size={12} /> Ubicación
+                        </p>
+                        <p className="text-gray-300 truncate">{empleo.ubicacion}</p>
+                      </div>
+                    )}
+                    {empleo.modalidad && (
+                      <div className="bg-black/30 p-2 rounded-lg">
+                        <p className="text-gray-500 mb-1">Modalidad</p>
+                        <p className="text-blue-300 font-semibold">{empleo.modalidad}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Salario destacado */}
+                  {empleo.salario && (
+                    <div className="bg-green-500/10 border border-green-500/30 p-2 rounded-lg mb-3">
+                      <p className="text-xs text-green-300 flex items-center gap-1">
+                        <DollarSign size={14} />
+                        <span className="font-semibold">{empleo.salario}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Tiempo */}
+                  <p className="text-xs text-gray-500 flex items-center gap-1 mb-3">
+                    <Clock size={12} />
+                    {diasDesde(empleo.createdAt)}
+                  </p>
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setModalDetalle(empleo)}
+                      className="flex-1 flex items-center justify-center gap-1 p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg text-blue-400 transition-colors text-xs font-semibold"
+                    >
+                      <Eye size={14} />
+                      Ver
+                    </button>
+
+                    <button
+                      onClick={() => abrirEdicion(empleo)}
+                      className="flex-1 flex items-center justify-center gap-1 p-2 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-lg text-yellow-400 transition-colors text-xs font-semibold"
+                    >
+                      <Edit2 size={14} />
+                      Editar
+                    </button>
+                    
+                    {empleo.estado === "ACTIVA" ? (
+                      <button
+                        onClick={() => cerrarEmpleo(empleo)}
+                        className="p-2 bg-orange-500/10 hover:bg-orange-500/20 rounded-lg text-orange-400 transition-colors"
+                        title="Cerrar"
+                      >
+                        <Power size={16} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => reabrirEmpleo(empleo)}
+                        className="p-2 bg-green-500/10 hover:bg-green-500/20 rounded-lg text-green-400 transition-colors"
+                        title="Reabrir"
+                      >
+                        <PlayCircle size={16} />
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => setModalEliminar(empleo)}
+                      className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* MODAL DETALLE */}
+      {modalDetalle && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-yellow-500/30 rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-2xl font-bold">{modalDetalle.titulo}</h2>
+                  {modalDetalle.estado === "ACTIVA" ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold">
+                      <PlayCircle size={14} />
+                      Activa
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold">
+                      <XCircle size={14} />
+                      Cerrada
+                    </span>
+                  )}
+                </div>
+                <p className="text-yellow-400 font-medium flex items-center gap-2">
+                  <Building2 size={16} />
+                  {modalDetalle.empresa}
+                </p>
+                <p className="text-gray-400 text-sm">ID: #{modalDetalle.id}</p>
+              </div>
+              <button
+                onClick={() => setModalDetalle(null)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Info en grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              {modalDetalle.ubicacion && (
+                <div className="bg-black/40 p-3 rounded-lg">
+                  <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                    <MapPin size={12} /> Ubicación
+                  </p>
+                  <p className="text-sm font-medium">{modalDetalle.ubicacion}</p>
+                </div>
+              )}
+
+              {modalDetalle.modalidad && (
+                <div className="bg-black/40 p-3 rounded-lg">
+                  <p className="text-xs text-gray-400 mb-1">Modalidad</p>
+                  <p className="text-sm font-medium">{modalDetalle.modalidad}</p>
+                </div>
+              )}
+
+              {modalDetalle.jornada && (
+                <div className="bg-black/40 p-3 rounded-lg">
+                  <p className="text-xs text-gray-400 mb-1">Jornada</p>
+                  <p className="text-sm font-medium">{modalDetalle.jornada}</p>
+                </div>
+              )}
+
+              {modalDetalle.contrato && (
+                <div className="bg-black/40 p-3 rounded-lg">
+                  <p className="text-xs text-gray-400 mb-1">Contrato</p>
+                  <p className="text-sm font-medium">{modalDetalle.contrato}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Salario */}
+            {modalDetalle.salario && (
+              <div className="bg-gradient-to-r from-green-600/20 to-green-800/20 border border-green-500/30 p-4 rounded-lg mb-4">
+                <p className="text-xs text-green-300 mb-1 flex items-center gap-1">
+                  <DollarSign size={14} /> SALARIO
+                </p>
+                <p className="text-xl font-bold text-green-400">{modalDetalle.salario}</p>
+              </div>
+            )}
+
+            {/* Descripción */}
+            <div className="bg-black/40 p-4 rounded-lg mb-4">
+              <p className="text-xs text-yellow-400 mb-2 font-semibold flex items-center gap-1">
+                <FileText size={14} /> DESCRIPCIÓN
+              </p>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap">{modalDetalle.descripcion}</p>
+            </div>
+
+            {/* Requisitos */}
+            {modalDetalle.requisitos && (
+              <div className="bg-black/40 p-4 rounded-lg mb-4">
+                <p className="text-xs text-yellow-400 mb-2 font-semibold flex items-center gap-1">
+                  <Award size={14} /> REQUISITOS
+                </p>
+                <p className="text-sm text-gray-300 whitespace-pre-wrap">{modalDetalle.requisitos}</p>
+              </div>
+            )}
+
+            {/* Beneficios */}
+            {modalDetalle.beneficios && (
+              <div className="bg-black/40 p-4 rounded-lg mb-4">
+                <p className="text-xs text-yellow-400 mb-2 font-semibold">BENEFICIOS</p>
+                <p className="text-sm text-gray-300 whitespace-pre-wrap">{modalDetalle.beneficios}</p>
+              </div>
+            )}
+
+            {/* Fechas */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="bg-black/40 p-3 rounded-lg">
+                <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                  <Calendar size={12} /> Publicado
+                </p>
+                <p className="text-sm font-medium">{formatearFecha(modalDetalle.createdAt)}</p>
+              </div>
+
+              <div className="bg-black/40 p-3 rounded-lg">
+                <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                  <Clock size={12} /> Última actualización
+                </p>
+                <p className="text-sm font-medium">{formatearFecha(modalDetalle.updatedAt)}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setModalDetalle(null)}
+                className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EDICIÓN */}
+        {modalEditar && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-yellow-500/30 rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="bg-yellow-500/20 p-3 rounded-lg">
+                    <Edit2 size={24} className="text-yellow-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Editar Empleo</h3>
+                    <p className="text-xs text-gray-400">ID: #{modalEditar.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setModalEditar(null)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Formulario */}
+              <div className="space-y-4">
+                {/* Título */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Título del empleo <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={datosEditar.titulo}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, titulo: e.target.value })}
+                    placeholder="Ej: Desarrollador Full Stack"
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                  />
+                </div>
+
+                {/* Empresa y Ubicación (grid 2 columnas) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Empresa <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={datosEditar.empresa}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, empresa: e.target.value })}
+                      placeholder="Nombre de la empresa"
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Ubicación
+                    </label>
+                    <input
+                      type="text"
+                      value={datosEditar.ubicacion}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, ubicacion: e.target.value })}
+                      placeholder="Ej: Ciudad de México"
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                    />
+                  </div>
+                </div>
+
+                {/* Modalidad, Jornada, Contrato (grid 3 columnas) */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Modalidad
+                    </label>
+                    <select
+                      value={datosEditar.modalidad}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, modalidad: e.target.value })}
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Presencial">Presencial</option>
+                      <option value="Remoto">Remoto</option>
+                      <option value="Híbrido">Híbrido</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Jornada
+                    </label>
+                    <select
+                      value={datosEditar.jornada}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, jornada: e.target.value })}
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Tiempo completo">Tiempo completo</option>
+                      <option value="Medio tiempo">Medio tiempo</option>
+                      <option value="Por horas">Por horas</option>
+                      <option value="Freelance">Freelance</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-300">
+                      Contrato
+                    </label>
+                    <select
+                      value={datosEditar.contrato}
+                      onChange={(e) => setDatosEditar({ ...datosEditar, contrato: e.target.value })}
+                      className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-500/50"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Indefinido">Indefinido</option>
+                      <option value="Temporal">Temporal</option>
+                      <option value="Por obra o labor">Por obra o labor</option>
+                      <option value="Por comisión">Por comisión</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Salario */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Salario
+                  </label>
+                  <input
+                    type="text"
+                    value={datosEditar.salario}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, salario: e.target.value })}
+                    placeholder="Ej: $15,000 (Mensual) o Por acordar"
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50"
+                  />
+                </div>
+
+                {/* Descripción */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Descripción <span className="text-red-400">*</span>
+                  </label>
+                  <textarea
+                    value={datosEditar.descripcion}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, descripcion: e.target.value })}
+                    placeholder="Describe las responsabilidades y el rol..."
+                    rows={4}
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                  />
+                </div>
+
+                {/* Requisitos */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Requisitos
+                  </label>
+                  <textarea
+                    value={datosEditar.requisitos}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, requisitos: e.target.value })}
+                    placeholder="Lista los requisitos del puesto..."
+                    rows={3}
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                  />
+                </div>
+
+                {/* Beneficios */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2 text-gray-300">
+                    Beneficios
+                  </label>
+                  <textarea
+                    value={datosEditar.beneficios}
+                    onChange={(e) => setDatosEditar({ ...datosEditar, beneficios: e.target.value })}
+                    placeholder="Lista los beneficios que ofreces..."
+                    rows={3}
+                    className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500/50 resize-none"
+                  />
+                </div>
+
+                {/* Error dentro del modal */}
+                {errorModal && (
+                  <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-3 flex items-start gap-2">
+                    <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-red-400" />
+                    <p className="text-sm text-red-300">{errorModal}</p>
+                  </div>
+                )}
+
+                {/* Aviso */}
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-xs text-blue-300 flex items-start gap-2">
+                    <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                    <span>Los campos marcados con <span className="text-red-400">*</span> son obligatorios. Para cambiar el estado, usa los botones de Cerrar/Reabrir.</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="flex gap-3 justify-end mt-6">
+                <button
+                  onClick={() => setModalEditar(null)}
+                  disabled={guardando}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarEmpleo}
+                  disabled={guardando}
+                  className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {guardando ? (
+                    <>
+                      <span className="animate-spin"></span>
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={18} />
+                      Guardar Cambios
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {/* MODAL ELIMINAR */}
+      {modalEliminar && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-red-500/30 rounded-xl p-6 max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-500/20 p-3 rounded-lg">
+                <AlertCircle size={24} className="text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold">¿Eliminar empleo?</h3>
+            </div>
+            
+            <p className="text-gray-300 mb-2">Estás a punto de eliminar:</p>
+            <p className="text-yellow-400 font-semibold mb-1">
+              {modalEliminar.titulo}
+            </p>
+            <p className="text-gray-400 text-sm mb-4">{modalEliminar.empresa}</p>
+            <p className="text-sm text-gray-400 mb-6">
+              Esta acción no se puede deshacer.
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setModalEliminar(null)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={eliminarEmpleo}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AdminEmpleos;
